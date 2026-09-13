@@ -4,6 +4,7 @@ struct TwinHomeView: View {
     @EnvironmentObject private var profileStore: ProfileStore
     @State private var isShowingProfiles = false
     @State private var isShowingDetails = false
+    @State private var isRefiningTwin = false
 
     var body: some View {
         ZStack {
@@ -16,7 +17,7 @@ struct TwinHomeView: View {
                         topBar(profile)
                         twinStage(profile)
                         identityCard(profile)
-                        improveCard
+                        improveCard(profile)
                     }
                     .padding(.bottom, 28)
                 }
@@ -29,6 +30,11 @@ struct TwinHomeView: View {
         .sheet(isPresented: $isShowingDetails) {
             if let profile = profileStore.selectedProfile {
                 TwinDetailsView(profile: profile)
+            }
+        }
+        .sheet(isPresented: $isRefiningTwin) {
+            if let profile = profileStore.selectedProfile {
+                RefineTwinView(profile: profile)
             }
         }
     }
@@ -98,7 +104,7 @@ struct TwinHomeView: View {
         VStack(spacing: 18) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("TWIN v0.01")
+                    Text("TWIN v0.02")
                         .font(.caption.bold())
                         .tracking(1.2)
                         .foregroundStyle(EidomeTheme.secondaryText)
@@ -130,31 +136,36 @@ struct TwinHomeView: View {
         .padding(.top, 18)
     }
 
-    private var improveCard: some View {
-        HStack(spacing: 14) {
-            Image(systemName: "sparkles")
-                .font(.title2)
-                .foregroundStyle(EidomeTheme.violet)
-                .frame(width: 44, height: 44)
-                .background(EidomeTheme.violet.opacity(0.14), in: Circle())
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Improve this twin")
-                    .font(.headline)
-                Text("Waist, chest and limb measurements unlock in v0.02")
-                    .font(.caption)
+    private func improveCard(_ profile: TwinProfile) -> some View {
+        Button {
+            isRefiningTwin = true
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: "ruler")
+                    .font(.title2)
+                    .foregroundStyle(EidomeTheme.violet)
+                    .frame(width: 44, height: 44)
+                    .background(EidomeTheme.violet.opacity(0.14), in: Circle())
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(profile.bodyMeasurements?.isEmpty == false ? "Refine body shape" : "Shape this twin")
+                        .font(.headline)
+                    Text("\(profile.bodyMeasurements?.completedCount ?? 0) of 7 body measurements added")
+                        .font(.caption)
+                        .foregroundStyle(EidomeTheme.secondaryText)
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
                     .foregroundStyle(EidomeTheme.secondaryText)
-                    .multilineTextAlignment(.leading)
             }
-            Spacer()
-            Image(systemName: "lock.fill")
-                .foregroundStyle(EidomeTheme.secondaryText)
+            .padding(18)
+            .glassCard()
         }
-        .padding(18)
-        .glassCard()
+        .buttonStyle(.plain)
         .padding(.horizontal, 20)
         .padding(.top, 14)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Improve this twin. More measurements unlock in version 0.02.")
+        .accessibilityLabel("Shape this twin with body measurements.")
     }
 
     private func completenessRing(_ value: Int) -> some View {
@@ -205,6 +216,9 @@ private struct TwinDetailsView: View {
                     Section("Measured") {
                         detail("Height", "\(Int(profile.heightCentimeters)) cm")
                         detail("Weight", "\(Int(profile.weightKilograms)) kg")
+                        if let measurements = profile.bodyMeasurements {
+                            measurementDetails(measurements)
+                        }
                     }
                     Section("Derived") {
                         detail("BMI", String(format: "%.1f", profile.bmi))
@@ -232,6 +246,170 @@ private struct TwinDetailsView: View {
             Text(label)
             Spacer()
             Text(value).foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private func measurementDetails(_ values: BodyMeasurements) -> some View {
+        optionalDetail("Shoulders", values.shoulderWidthCentimeters)
+        optionalDetail("Chest", values.chestCircumferenceCentimeters)
+        optionalDetail("Waist", values.waistCircumferenceCentimeters)
+        optionalDetail("Hips", values.hipCircumferenceCentimeters)
+        optionalDetail("Inseam", values.inseamCentimeters)
+        optionalDetail("Thigh", values.thighCircumferenceCentimeters)
+        optionalDetail("Calf", values.calfCircumferenceCentimeters)
+    }
+
+    @ViewBuilder
+    private func optionalDetail(_ label: String, _ value: Double?) -> some View {
+        if let value {
+            detail(label, value.formatted(.number.precision(.fractionLength(0...1))) + " cm")
+        }
+    }
+}
+
+private struct RefineTwinView: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var profileStore: ProfileStore
+    let profile: TwinProfile
+    @State private var measurements: BodyMeasurements
+
+    init(profile: TwinProfile) {
+        self.profile = profile
+        _measurements = State(initialValue: profile.bodyMeasurements ?? BodyMeasurements())
+    }
+
+    private var previewProfile: TwinProfile {
+        var copy = profile
+        copy.bodyMeasurements = measurements.isEmpty ? nil : measurements
+        return copy
+    }
+
+    private var invalidFieldCount: Int {
+        [
+            (measurements.shoulderWidthCentimeters, 20.0...70.0),
+            (measurements.chestCircumferenceCentimeters, 40.0...180.0),
+            (measurements.waistCircumferenceCentimeters, 35.0...180.0),
+            (measurements.hipCircumferenceCentimeters, 40.0...180.0),
+            (measurements.inseamCentimeters, 35.0...130.0),
+            (measurements.thighCircumferenceCentimeters, 20.0...100.0),
+            (measurements.calfCircumferenceCentimeters, 15.0...70.0)
+        ].filter { entry in
+            guard let value = entry.0 else { return false }
+            return !entry.1.contains(value)
+        }.count
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                EidomeTheme.backgroundGradient.ignoresSafeArea()
+                ScrollView {
+                    VStack(spacing: 18) {
+                        TwinSceneView(profile: previewProfile)
+                            .frame(height: 300)
+                            .accessibilityLabel("Live preview of \(profile.name)'s body model")
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Shape \(profile.name)'s twin")
+                                .font(.title2.bold())
+                            Text("Add only what you have measured. Each value updates the model above and can be changed later.")
+                                .font(.subheadline)
+                                .foregroundStyle(EidomeTheme.secondaryText)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        VStack(spacing: 0) {
+                            MeasurementInputRow(title: "Shoulder width", value: $measurements.shoulderWidthCentimeters)
+                            MeasurementInputRow(title: "Chest circumference", value: $measurements.chestCircumferenceCentimeters)
+                            MeasurementInputRow(title: "Waist circumference", value: $measurements.waistCircumferenceCentimeters)
+                            MeasurementInputRow(title: "Hip circumference", value: $measurements.hipCircumferenceCentimeters)
+                            MeasurementInputRow(title: "Inseam", value: $measurements.inseamCentimeters)
+                            MeasurementInputRow(title: "Thigh circumference", value: $measurements.thighCircumferenceCentimeters)
+                            MeasurementInputRow(title: "Calf circumference", value: $measurements.calfCircumferenceCentimeters, showsDivider: false)
+                        }
+                        .glassCard()
+
+                        HStack(spacing: 12) {
+                            provenanceLabel("Measured", color: EidomeTheme.cyan)
+                            provenanceLabel("Derived", color: EidomeTheme.violet)
+                            provenanceLabel("Estimated", color: EidomeTheme.secondaryText)
+                        }
+
+                        if invalidFieldCount > 0 {
+                            Label("Check \(invalidFieldCount) measurement\(invalidFieldCount == 1 ? "" : "s").", systemImage: "exclamationmark.triangle.fill")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(.orange)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                    .padding(20)
+                }
+            }
+            .foregroundStyle(.white)
+            .navigationTitle("Body measurements")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        var updated = profile
+                        updated.bodyMeasurements = measurements.isEmpty ? nil : measurements
+                        profileStore.update(updated)
+                        dismiss()
+                    }
+                    .fontWeight(.semibold)
+                    .disabled(invalidFieldCount > 0)
+                }
+            }
+        }
+        .preferredColorScheme(.dark)
+    }
+
+    private func provenanceLabel(_ title: String, color: Color) -> some View {
+        HStack(spacing: 5) {
+            Circle().fill(color).frame(width: 7, height: 7)
+            Text(title).font(.caption2.weight(.semibold))
+        }
+        .foregroundStyle(EidomeTheme.secondaryText)
+    }
+}
+
+private struct MeasurementInputRow: View {
+    let title: String
+    @Binding var value: Double?
+    var showsDivider = true
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                Text(title)
+                    .font(.subheadline)
+                Spacer()
+                TextField("—", value: $value, format: .number.precision(.fractionLength(0...1)))
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .font(.body.monospacedDigit())
+                    .frame(width: 76)
+                    .padding(.vertical, 9)
+                    .padding(.horizontal, 10)
+                    .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
+                Text("cm")
+                    .font(.caption)
+                    .foregroundStyle(EidomeTheme.secondaryText)
+                    .frame(width: 22, alignment: .leading)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 7)
+
+            if showsDivider {
+                Rectangle()
+                    .fill(EidomeTheme.line)
+                    .frame(height: 1)
+                    .padding(.leading, 16)
+            }
         }
     }
 }

@@ -1,5 +1,29 @@
 import Foundation
 
+struct BodyMeasurements: Codable, Hashable {
+    var shoulderWidthCentimeters: Double? = nil
+    var chestCircumferenceCentimeters: Double? = nil
+    var waistCircumferenceCentimeters: Double? = nil
+    var hipCircumferenceCentimeters: Double? = nil
+    var inseamCentimeters: Double? = nil
+    var thighCircumferenceCentimeters: Double? = nil
+    var calfCircumferenceCentimeters: Double? = nil
+
+    var completedCount: Int {
+        [
+            shoulderWidthCentimeters,
+            chestCircumferenceCentimeters,
+            waistCircumferenceCentimeters,
+            hipCircumferenceCentimeters,
+            inseamCentimeters,
+            thighCircumferenceCentimeters,
+            calfCircumferenceCentimeters
+        ].compactMap { $0 }.count
+    }
+
+    var isEmpty: Bool { completedCount == 0 }
+}
+
 struct TwinProfile: Identifiable, Codable, Hashable {
     enum Relationship: String, Codable, CaseIterable, Identifiable {
         case me = "Me"
@@ -24,6 +48,7 @@ struct TwinProfile: Identifiable, Codable, Hashable {
     var heightCentimeters: Double
     var weightKilograms: Double
     var createdAt: Date
+    var bodyMeasurements: BodyMeasurements?
 
     init(
         id: UUID = UUID(),
@@ -33,7 +58,8 @@ struct TwinProfile: Identifiable, Codable, Hashable {
         birthDate: Date,
         heightCentimeters: Double,
         weightKilograms: Double,
-        createdAt: Date = .now
+        createdAt: Date = .now,
+        bodyMeasurements: BodyMeasurements? = nil
     ) {
         self.id = id
         self.name = name
@@ -43,6 +69,7 @@ struct TwinProfile: Identifiable, Codable, Hashable {
         self.heightCentimeters = heightCentimeters
         self.weightKilograms = weightKilograms
         self.createdAt = createdAt
+        self.bodyMeasurements = bodyMeasurements
     }
 
     var age: Int {
@@ -55,7 +82,10 @@ struct TwinProfile: Identifiable, Codable, Hashable {
         return weightKilograms / (meters * meters)
     }
 
-    var completeness: Int { 8 }
+    var completeness: Int {
+        let measuredShapeInputs = bodyMeasurements?.completedCount ?? 0
+        return min(24, 8 + Int((Double(measuredShapeInputs) / 7.0 * 16.0).rounded()))
+    }
 }
 
 struct TwinDraft {

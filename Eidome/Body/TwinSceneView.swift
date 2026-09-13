@@ -77,9 +77,7 @@ struct TwinSceneView: UIViewRepresentable {
         let jointMaterial = glowMaterial()
 
         let floorY = -g.totalHeight / 2
-        let legCenterY = floorY + g.legLength / 2
         let hipY = floorY + g.legLength
-        let torsoCenterY = hipY + g.torsoHeight / 2
         let shoulderY = hipY + g.torsoHeight * 0.88
         let neckY = hipY + g.torsoHeight + g.headRadius * 0.28
         let headY = neckY + g.headRadius * 1.18
@@ -87,30 +85,30 @@ struct TwinSceneView: UIViewRepresentable {
         addEllipsoid(to: root, radii: SCNVector3(g.headRadius * 0.82, g.headRadius, g.headRadius * 0.83), at: SCNVector3(0, headY, 0), material: material)
         addCapsule(to: root, radius: g.headRadius * 0.34, height: g.headRadius * 0.75, at: SCNVector3(0, neckY, 0), material: material)
 
-        let torsoWidth = (g.shoulderWidth + g.waistWidth) / 2
-        let torso = SCNBox(
-            width: CGFloat(torsoWidth),
-            height: CGFloat(g.torsoHeight),
-            length: CGFloat(g.torsoDepth),
-            chamferRadius: CGFloat(torsoWidth * 0.18)
-        )
-        torso.widthSegmentCount = 8
-        torso.heightSegmentCount = 8
-        torso.lengthSegmentCount = 8
-        let torsoNode = SCNNode(geometry: torso)
-        torsoNode.geometry?.firstMaterial = material
-        torsoNode.position = SCNVector3(0, torsoCenterY, 0)
-        torsoNode.scale = SCNVector3(1, 1, 1)
-        root.addChildNode(torsoNode)
-
         addEllipsoid(
             to: root,
-            radii: SCNVector3(g.shoulderWidth / 2, g.totalHeight * 0.065, g.torsoDepth * 0.52),
+            radii: SCNVector3(g.chestWidth / 2, g.torsoHeight * 0.32, g.chestDepth / 2),
+            at: SCNVector3(0, hipY + g.torsoHeight * 0.68, 0),
+            material: material
+        )
+        addEllipsoid(
+            to: root,
+            radii: SCNVector3(g.waistWidth / 2, g.torsoHeight * 0.27, g.waistDepth / 2),
+            at: SCNVector3(0, hipY + g.torsoHeight * 0.35, 0),
+            material: material
+        )
+        addEllipsoid(
+            to: root,
+            radii: SCNVector3(g.hipWidth / 2, g.torsoHeight * 0.18, g.hipDepth / 2),
+            at: SCNVector3(0, hipY + g.torsoHeight * 0.08, 0),
+            material: material
+        )
+        addEllipsoid(
+            to: root,
+            radii: SCNVector3(g.shoulderWidth / 2, g.totalHeight * 0.045, g.chestDepth * 0.50),
             at: SCNVector3(0, shoulderY, 0),
             material: material
         )
-
-        addEllipsoid(to: root, radii: SCNVector3(g.hipWidth / 2, g.totalHeight * 0.075, g.torsoDepth * 0.56), at: SCNVector3(0, hipY, 0), material: material)
 
         let armX = g.shoulderWidth * 0.57
         let armY = shoulderY - g.armLength * 0.48
@@ -121,10 +119,15 @@ struct TwinSceneView: UIViewRepresentable {
         }
 
         let legX = g.hipWidth * 0.28
+        let thighLength = g.legLength * 0.52
+        let calfLength = g.legLength * 0.48
+        let kneeY = floorY + calfLength
         for side: Float in [-1, 1] {
-            addCapsule(to: root, radius: g.legRadius, height: g.legLength, at: SCNVector3(side * legX, legCenterY, 0), material: material)
-            addSphere(to: root, radius: g.legRadius * 1.02, at: SCNVector3(side * legX, hipY, 0), material: jointMaterial)
-            addEllipsoid(to: root, radii: SCNVector3(g.legRadius * 0.95, g.legRadius * 0.55, g.legRadius * 1.65), at: SCNVector3(side * legX, floorY - g.legRadius * 0.05, g.legRadius * 0.62), material: material)
+            addCapsule(to: root, radius: g.thighRadius, height: thighLength, at: SCNVector3(side * legX, kneeY + thighLength / 2, 0), material: material)
+            addCapsule(to: root, radius: g.calfRadius, height: calfLength, at: SCNVector3(side * legX, floorY + calfLength / 2, 0), material: material)
+            addSphere(to: root, radius: g.calfRadius * 0.90, at: SCNVector3(side * legX, kneeY, 0), material: jointMaterial)
+            addSphere(to: root, radius: g.thighRadius, at: SCNVector3(side * legX, hipY, 0), material: jointMaterial)
+            addEllipsoid(to: root, radii: SCNVector3(g.calfRadius * 0.95, g.calfRadius * 0.55, g.calfRadius * 1.65), at: SCNVector3(side * legX, floorY - g.calfRadius * 0.05, g.calfRadius * 0.62), material: material)
         }
 
         root.eulerAngles.y = -.pi / 12
@@ -146,7 +149,7 @@ struct TwinSceneView: UIViewRepresentable {
         torus.firstMaterial = material
 
         let node = SCNNode(geometry: torus)
-        node.position = SCNVector3(0, -geometry.totalHeight / 2 - geometry.legRadius * 0.12, 0)
+        node.position = SCNVector3(0, -geometry.totalHeight / 2 - geometry.calfRadius * 0.12, 0)
         return node
     }
 

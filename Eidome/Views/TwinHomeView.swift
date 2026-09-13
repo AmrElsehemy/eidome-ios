@@ -5,6 +5,7 @@ struct TwinHomeView: View {
     @State private var isShowingProfiles = false
     @State private var isShowingDetails = false
     @State private var isRefiningTwin = false
+    @State private var selectedLayer: TwinBodyLayer = .body
 
     var body: some View {
         ZStack {
@@ -80,31 +81,70 @@ struct TwinHomeView: View {
     }
 
     private func twinStage(_ profile: TwinProfile) -> some View {
-        ZStack(alignment: .bottom) {
-            TwinSceneView(profile: profile)
-                .frame(height: 470)
-                .id(profile.id)
+        VStack(spacing: 12) {
+            ZStack(alignment: .bottom) {
+                TwinSceneView(profile: profile, layer: selectedLayer)
+                    .frame(height: 420)
+                    .id(profile.id)
 
-            VStack(spacing: 7) {
                 Text("Drag to rotate · Pinch to zoom")
                     .font(.caption)
                     .foregroundStyle(EidomeTheme.secondaryText)
-                Label("Estimated model", systemImage: "circle.dashed")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(EidomeTheme.cyan)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(.ultraThinMaterial, in: Capsule())
+                    .padding(.bottom, 4)
             }
-            .padding(.bottom, 8)
+
+            layerPicker
+
+            Label(selectedLayer.modelNote, systemImage: "circle.dashed")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(EidomeTheme.cyan)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(.ultraThinMaterial, in: Capsule())
         }
+    }
+
+    private var layerPicker: some View {
+        HStack(spacing: 6) {
+            ForEach(TwinBodyLayer.allCases) { layer in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        selectedLayer = layer
+                    }
+                } label: {
+                    VStack(spacing: 5) {
+                        Image(systemName: layer.symbol)
+                            .font(.body)
+                        Text(layer.rawValue)
+                            .font(.caption2.weight(.semibold))
+                            .lineLimit(1)
+                    }
+                    .foregroundStyle(selectedLayer == layer ? Color.white : EidomeTheme.secondaryText)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(
+                        selectedLayer == layer ? EidomeTheme.violet.opacity(0.32) : Color.clear,
+                        in: RoundedRectangle(cornerRadius: 13, style: .continuous)
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(selectedLayer == layer ? .isSelected : [])
+            }
+        }
+        .padding(5)
+        .background(EidomeTheme.panel, in: RoundedRectangle(cornerRadius: 17, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 17, style: .continuous)
+                .stroke(EidomeTheme.line, lineWidth: 1)
+        }
+        .padding(.horizontal, 20)
     }
 
     private func identityCard(_ profile: TwinProfile) -> some View {
         VStack(spacing: 18) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("TWIN v0.02")
+                    Text("TWIN v0.03")
                         .font(.caption.bold())
                         .tracking(1.2)
                         .foregroundStyle(EidomeTheme.secondaryText)

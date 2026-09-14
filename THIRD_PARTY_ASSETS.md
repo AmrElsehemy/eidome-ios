@@ -3,6 +3,19 @@
 This file records asset provenance from the first prototype. Inclusion here is
 not a final commercial-licensing decision.
 
+## MPFB exterior-human prototype
+
+- Project: MPFB / MakeHuman Plugin for Blender
+- Source: https://github.com/makehumancommunity/mpfb2
+- Prototype use: generate the exterior body mesh from measurements
+- Minimum documented Blender version: 4.2
+- Local use: private evaluation and mobile-export spike
+- Shipping status: no generated asset is included in the Eidome application yet
+
+MPFB code and generated-asset licensing are distinct. Before distributing a
+generated model, record the exact MPFB extension version and every asset pack,
+skin, body part, texture, and proxy used, then verify each asset's licence.
+
 ## Z-Anatomy prototype source
 
 - Project: Z-Anatomy / Models of Human Anatomy

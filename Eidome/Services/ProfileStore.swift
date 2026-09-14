@@ -97,7 +97,7 @@ final class ProfileStore: ObservableObject {
     #if DEBUG
     private static var screenshotProfile: TwinProfile {
         let birthDate = Calendar(identifier: .gregorian)
-            .date(from: DateComponents(year: 1986, month: 1, day: 1)) ?? .now
+            .date(from: DateComponents(year: 1986, month: 1, day: 1)) ?? Date(timeIntervalSince1970: 0)
         return TwinProfile(
             name: "Amr", relationship: .me, biologicalSex: .male,
             birthDate: birthDate, heightCentimeters: 180, weightKilograms: 84.7,

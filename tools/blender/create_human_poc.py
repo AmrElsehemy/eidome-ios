@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import importlib
+import re
 import sys
 from pathlib import Path
 
@@ -76,10 +77,19 @@ def preferred_skin(
         return None
 
     opposite_sex = "female" if sex == "male" else "male"
+
+    def has_label(path: str, label: str) -> bool:
+        # Asset names use separators such as underscores and slashes. Matching
+        # labels as tokens prevents "male" from matching inside "female".
+        return re.search(
+            rf"(?<![a-z]){re.escape(label.casefold())}(?![a-z])",
+            path.casefold(),
+        ) is not None
+
     compatible = [
         path
         for path in paths
-        if sex in path.lower() or opposite_sex not in path.lower()
+        if has_label(path, sex) or not has_label(path, opposite_sex)
     ]
     if not compatible:
         return None

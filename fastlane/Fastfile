@@ -1,0 +1,26 @@
+default_platform(:ios)
+
+platform :ios do
+  desc "Upload App Store text metadata without a binary or screenshots"
+  lane :metadata do
+    required = %w[ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_CONTENT_BASE64]
+    missing = required.select { |name| ENV[name].to_s.empty? }
+    UI.user_error!("Missing secrets: #{missing.join(', ')}") unless missing.empty?
+
+    api_key = app_store_connect_api_key(
+      key_id: ENV["ASC_KEY_ID"],
+      issuer_id: ENV["ASC_ISSUER_ID"],
+      key_content: ENV["ASC_KEY_CONTENT_BASE64"],
+      is_key_content_base64: true
+    )
+
+    deliver(
+      api_key: api_key,
+      app_identifier: "ai.knowlly.eidome",
+      skip_binary_upload: true,
+      skip_screenshots: true,
+      precheck_include_in_app_purchases: false,
+      force: false
+    )
+  end
+end

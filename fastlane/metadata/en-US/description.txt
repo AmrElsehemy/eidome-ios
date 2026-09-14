@@ -1,0 +1,20 @@
+Meet your body as a living visual model.
+
+Eidome turns a few personal measurements into an interactive, estimated 3D twin that becomes more personal as you add information.
+
+CREATE YOUR TWIN
+Start with a name, age, height, weight, and biological sex. Eidome generates an estimated body shape that gives you an immediate visual starting point.
+
+EXPLORE IN LAYERS
+Rotate and zoom your twin, then switch between Body, Muscles, Skeleton, and Joints. Anatomical layers are educational representations—not medical scans.
+
+BUILD MULTIPLE PROFILES
+Create separate twins for yourself and adult-managed dependents. Each profile keeps its own measurements, mobility information, and completion progress.
+
+REFINE WHAT EIDOME KNOWS
+Add body measurements and mobility assessments to improve your twin over time. Eidome distinguishes personal measurements from estimated anatomy so you can understand what the model actually knows.
+
+PRIVATE BY DESIGN
+This version requires no account, advertising, analytics, or cloud sync. Profile information stays in local app storage on your device. Delete one twin—or all Eidome data—whenever you choose.
+
+Eidome is designed for fitness education and personal tracking. It is not a medical device and does not provide diagnoses or treatment recommendations.

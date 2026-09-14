@@ -1,0 +1,13 @@
+Eidome creates an estimated visual body model for fitness education and personal tracking. It is not a medical device and does not diagnose conditions or recommend treatment.
+
+This version has no account, advertising, third-party analytics, or cloud sync. Profile information remains in local app storage on the device. The device owner may create adult-managed dependent profiles.
+
+No sign-in or review credentials are required.
+
+Suggested review flow:
+1. Create a twin from the onboarding screen.
+2. Rotate and zoom the 3D model.
+3. Switch between Body, Muscles, Skeleton, and Joints.
+4. Add body and mobility measurements.
+5. Add a second profile and switch profiles.
+6. Open About Eidome to review privacy information and delete all local data.

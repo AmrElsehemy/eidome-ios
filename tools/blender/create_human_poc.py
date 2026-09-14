@@ -53,8 +53,10 @@ def set_studio_material(human: bpy.types.Object) -> None:
     if material.node_tree is None:
         material.use_nodes = True
     principled = material.node_tree.nodes.get("Principled BSDF")
-    principled.inputs["Base Color"].default_value = (0.34, 0.12, 0.07, 1.0)
-    principled.inputs["Roughness"].default_value = 0.47
+    # Until textured skin and eyes are installed, present the body as an
+    # intentional warm anatomical study rather than uncanny synthetic skin.
+    principled.inputs["Base Color"].default_value = (0.18, 0.055, 0.025, 1.0)
+    principled.inputs["Roughness"].default_value = 0.62
     human.data.materials.clear()
     human.data.materials.append(material)
 
@@ -97,14 +99,16 @@ def create_studio(human: bpy.types.Object) -> None:
     camera_data = bpy.data.cameras.new("Eidome Camera")
     camera = bpy.data.objects.new("Eidome Camera", camera_data)
     bpy.context.collection.objects.link(camera)
-    camera.location = (center.x, minimum.y - height * 1.45, center.z)
-    camera_data.lens = 58
+    # The rest pose is wider than it is tall in portrait framing. Pulling back
+    # prevents hands and feet from being clipped in the checkpoint render.
+    camera.location = (center.x, minimum.y - height * 2.15, center.z)
+    camera_data.lens = 62
     point_at(camera, center)
     bpy.context.scene.camera = camera
 
-    add_area_light("Key", (-height * 0.65, -height * 0.75, maximum.z), 900, height * 0.55, center)
-    add_area_light("Fill", (height * 0.65, -height * 0.25, center.z), 650, height * 0.45, center)
-    add_area_light("Rim", (0, height * 0.5, maximum.z * 0.9), 1100, height * 0.35, center)
+    add_area_light("Key", (-height * 0.65, -height * 0.75, maximum.z), 280, height * 0.55, center)
+    add_area_light("Fill", (height * 0.65, -height * 0.25, center.z), 110, height * 0.45, center)
+    add_area_light("Rim", (0, height * 0.5, maximum.z * 0.9), 360, height * 0.35, center)
 
 
 def select_render_engine(scene: bpy.types.Scene) -> str:
@@ -171,6 +175,7 @@ def main() -> None:
     scene.render.image_settings.file_format = "PNG"
     scene.render.filepath = str(output / "eidome-human-poc.png")
     scene.render.film_transparent = False
+    scene.view_settings.exposure = -0.7
     bpy.ops.render.render(write_still=True)
 
     print("Generated Eidome human:")

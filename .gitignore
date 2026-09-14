@@ -3,3 +3,7 @@ DerivedData/
 *.xcuserstate
 xcuserdata/
 
+# App Store Connect credentials
+AuthKey_*.p8
+fastlane/api_key.json
+.env

@@ -1,0 +1,17 @@
+name: App Store Screenshots
+on:
+  workflow_dispatch:
+jobs:
+  capture:
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
+      - run: bash scripts/capture-app-store-screenshots.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eidome-app-store-screenshots
+          path: fastlane/screenshots/
+          if-no-files-found: error
+          retention-days: 30

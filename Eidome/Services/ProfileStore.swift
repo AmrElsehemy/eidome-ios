@@ -11,6 +11,14 @@ final class ProfileStore: ObservableObject {
     private let legacySelectedProfileKey = "soma.selected-profile.v1"
 
     init() {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-eidomeScreenshotTwin") {
+            let profile = Self.screenshotProfile
+            profiles = [profile]
+            selectedProfileID = profile.id
+            return
+        }
+        #endif
         load()
     }
 
@@ -85,4 +93,27 @@ final class ProfileStore: ObservableObject {
             UserDefaults.standard.removeObject(forKey: selectedProfileKey)
         }
     }
+
+    #if DEBUG
+    private static var screenshotProfile: TwinProfile {
+        let birthDate = Calendar(identifier: .gregorian)
+            .date(from: DateComponents(year: 1986, month: 1, day: 1)) ?? .now
+        return TwinProfile(
+            name: "Amr", relationship: .me, biologicalSex: .male,
+            birthDate: birthDate, heightCentimeters: 180, weightKilograms: 84.7,
+            bodyMeasurements: BodyMeasurements(
+                shoulderWidthCentimeters: 48, chestCircumferenceCentimeters: 104,
+                waistCircumferenceCentimeters: 86, hipCircumferenceCentimeters: 98,
+                inseamCentimeters: 82, thighCircumferenceCentimeters: 58,
+                calfCircumferenceCentimeters: 39
+            ),
+            mobilityProfile: MobilityProfile(
+                leftAnkleDorsiflexion: 36, rightAnkleDorsiflexion: 39,
+                leftHipInternalRotation: 34, rightHipInternalRotation: 36,
+                leftShoulderFlexion: 168, rightShoulderFlexion: 171,
+                leftThoracicRotation: 47, rightThoracicRotation: 49
+            )
+        )
+    }
+    #endif
 }

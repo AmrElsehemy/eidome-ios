@@ -24,7 +24,7 @@ jobs:
         run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
 
       - name: Validate review assets
-        run: scripts/validate-review-readiness.sh
+        run: bash scripts/validate-review-readiness.sh
 
       - name: Debug simulator build
         run: |

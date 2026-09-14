@@ -61,6 +61,59 @@ def set_studio_material(human: bpy.types.Object) -> None:
     human.data.materials.append(material)
 
 
+def preferred_skin(paths: list[str], sex: str) -> str | None:
+    if not paths:
+        return None
+    preferred_terms = ("young", sex, "caucasian")
+    ranked = sorted(
+        paths,
+        key=lambda path: (
+            -sum(term in path.lower() for term in preferred_terms),
+            path.casefold(),
+        ),
+    )
+    return ranked[0]
+
+
+def apply_installed_assets(
+    human: bpy.types.Object,
+    sex: str,
+    AssetService,
+    HumanService,
+) -> dict[str, str]:
+    """Add optional MPFB system assets when they are installed locally."""
+    applied: dict[str, str] = {}
+    skins = [str(path) for path in AssetService.list_mhmat_assets("skins")]
+    skin = preferred_skin(skins, sex)
+    if skin:
+        HumanService.set_character_skin(
+            skin,
+            human,
+            bodyproxy=None,
+            skin_type="GAMEENGINE",
+            material_instances=False,
+        )
+        applied["skin"] = skin
+    else:
+        set_studio_material(human)
+
+    eyes = AssetService.find_asset_absolute_path(
+        "high-poly/high-poly.mhclo",
+        "eyes",
+    )
+    if eyes:
+        HumanService.add_mhclo_asset(
+            eyes,
+            human,
+            asset_type="eyes",
+            subdiv_levels=0,
+            material_type="GAMEENGINE",
+        )
+        applied["eyes"] = str(eyes)
+
+    return applied
+
+
 def evaluated_bounds(obj: bpy.types.Object) -> tuple[Vector, Vector]:
     evaluated = obj.evaluated_get(bpy.context.evaluated_depsgraph_get())
     corners = [evaluated.matrix_world @ Vector(corner) for corner in evaluated.bound_box]
@@ -130,6 +183,7 @@ def main() -> None:
     HumanService = dynamic_import("mpfb.services.humanservice", "HumanService")
     TargetService = dynamic_import("mpfb.services.targetservice", "TargetService")
     HumanObjectProperties = dynamic_import("mpfb.entities.objectproperties", "HumanObjectProperties")
+    AssetService = dynamic_import("mpfb.services.assetservice", "AssetService")
 
     clear_scene()
     human = HumanService.create_human(
@@ -155,10 +209,13 @@ def main() -> None:
     TargetService.reapply_macro_details(human)
     bpy.context.view_layer.update()
 
-    set_studio_material(human)
+    applied_assets = apply_installed_assets(human, args.sex, AssetService, HumanService)
     create_studio(human)
 
-    human.select_set(True)
+    bpy.ops.object.select_all(action="DESELECT")
+    for obj in bpy.context.scene.objects:
+        if obj.type == "MESH":
+            obj.select_set(True)
     bpy.context.view_layer.objects.active = human
     bpy.ops.wm.save_as_mainfile(filepath=str(output / "eidome-human-poc.blend"))
     bpy.ops.export_scene.gltf(
@@ -180,6 +237,8 @@ def main() -> None:
 
     print("Generated Eidome human:")
     print(f"  Render engine: {render_engine}")
+    print(f"  Installed skin: {applied_assets.get('skin', 'not found; using study material')}")
+    print(f"  Installed eyes: {applied_assets.get('eyes', 'not found')}")
     print(f"  BMI-derived shape input: {bmi:.2f}")
     print(f"  Blender: {output / 'eidome-human-poc.blend'}")
     print(f"  Mobile GLB: {output / 'eidome-human-poc.glb'}")

@@ -25,6 +25,11 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--height-cm", type=float, default=175.0)
     parser.add_argument("--weight-kg", type=float, default=75.0)
     parser.add_argument("--muscle", type=float, default=0.55)
+    parser.add_argument(
+        "--skin-query",
+        default=None,
+        help="Case-insensitive substring used to choose an installed MPFB skin.",
+    )
     return parser.parse_args(arguments)
 
 
@@ -61,7 +66,12 @@ def set_studio_material(human: bpy.types.Object) -> None:
     human.data.materials.append(material)
 
 
-def preferred_skin(paths: list[str], sex: str) -> str | None:
+def preferred_skin(
+    paths: list[str],
+    sex: str,
+    age: float,
+    skin_query: str | None,
+) -> str | None:
     if not paths:
         return None
 
@@ -74,11 +84,24 @@ def preferred_skin(paths: list[str], sex: str) -> str | None:
     if not compatible:
         return None
 
-    preferred_terms = ("young", sex)
+    if skin_query:
+        query = skin_query.casefold()
+        matches = [path for path in compatible if query in path.casefold()]
+        if not matches:
+            available = ", ".join(sorted(Path(path).stem for path in compatible))
+            raise RuntimeError(
+                f"No installed {sex} or neutral skin matches {skin_query!r}. "
+                f"Available compatible skins: {available or 'none'}"
+            )
+        return sorted(matches, key=str.casefold)[0]
+
+    age_term = "young" if age < 35 else "middleage" if age < 60 else "old"
+    unsafe_terms = ("genital", "tattoo", "makeup", "eyeliner", "goth", "emo")
     ranked = sorted(
         compatible,
         key=lambda path: (
-            -sum(term in path.lower() for term in preferred_terms),
+            sum(term in path.lower() for term in unsafe_terms),
+            -sum(term in path.lower() for term in (sex, age_term)),
             path.casefold(),
         ),
     )
@@ -88,13 +111,15 @@ def preferred_skin(paths: list[str], sex: str) -> str | None:
 def apply_installed_assets(
     human: bpy.types.Object,
     sex: str,
+    age: float,
+    skin_query: str | None,
     AssetService,
     HumanService,
 ) -> dict[str, str]:
     """Add optional MPFB system assets when they are installed locally."""
     applied: dict[str, str] = {}
     skins = [str(path) for path in AssetService.list_mhmat_assets("skins")]
-    skin = preferred_skin(skins, sex)
+    skin = preferred_skin(skins, sex, age, skin_query)
     if skin:
         HumanService.set_character_skin(
             skin,
@@ -219,7 +244,14 @@ def main() -> None:
     TargetService.reapply_macro_details(human)
     bpy.context.view_layer.update()
 
-    applied_assets = apply_installed_assets(human, args.sex, AssetService, HumanService)
+    applied_assets = apply_installed_assets(
+        human,
+        args.sex,
+        args.age,
+        args.skin_query,
+        AssetService,
+        HumanService,
+    )
     create_studio(human)
 
     bpy.ops.object.select_all(action="DESELECT")

@@ -4,6 +4,13 @@ import SwiftUI
 struct EidomeApp: App {
     @StateObject private var profileStore = ProfileStore()
 
+    init() {
+        #if DEBUG
+        let invalidSymbols = TwinBodyLayer.invalidSystemSymbols
+        assert(invalidSymbols.isEmpty, "Invalid SF Symbols: \(invalidSymbols.joined(separator: ", "))")
+        #endif
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()

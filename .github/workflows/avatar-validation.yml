@@ -1,0 +1,67 @@
+name: Avatar Validation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Render and validate avatar
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 15
+
+    env:
+      BLENDER_BIN: /Applications/Blender.app/Contents/MacOS/Blender
+      OUTPUT_ROOT: ${{ github.workspace }}/.eidome-assets/generated/human-poc
+
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+
+      - name: Verify Blender installation
+        run: |
+          test -x "$BLENDER_BIN"
+          "$BLENDER_BIN" --version
+
+      - name: Generate known-good avatar
+        run: |
+          bash tools/blender/build_human_poc.sh \
+            --name "Amr" \
+            --sex male \
+            --age 40 \
+            --height-cm 180 \
+            --weight-kg 85 \
+            --muscle 0.65 \
+            --skin-query "male_bronze" \
+            --clothes-query "male_swim_shorts1" \
+            2>&1 | tee "$RUNNER_TEMP/eidome-avatar-build.log"
+
+      - name: Validate artifacts and deformation
+        run: |
+          "$BLENDER_BIN" \
+            --background "$OUTPUT_ROOT/eidome-human-poc.blend" \
+            --python-exit-code 1 \
+            --python tools/blender/validate_human_poc.py \
+            -- \
+            --human-name "Amr" \
+            --glb "$OUTPUT_ROOT/eidome-human-poc.glb" \
+            --preview "$OUTPUT_ROOT/eidome-human-poc.png" \
+            --report "$OUTPUT_ROOT/validation.json" \
+            2>&1 | tee "$RUNNER_TEMP/eidome-avatar-validation.log"
+
+      - name: Upload validation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eidome-avatar-validation-${{ github.run_number }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            .eidome-assets/generated/human-poc/eidome-human-poc.blend
+            .eidome-assets/generated/human-poc/eidome-human-poc.glb
+            .eidome-assets/generated/human-poc/eidome-human-poc.png
+            .eidome-assets/generated/human-poc/validation.json
+            ${{ runner.temp }}/eidome-avatar-build.log
+            ${{ runner.temp }}/eidome-avatar-validation.log

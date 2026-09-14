@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import argparse
 import importlib
-import math
 import sys
 from pathlib import Path
 
@@ -51,7 +50,8 @@ def clear_scene() -> None:
 
 def set_studio_material(human: bpy.types.Object) -> None:
     material = bpy.data.materials.new("Eidome Skin Preview")
-    material.use_nodes = True
+    if material.node_tree is None:
+        material.use_nodes = True
     principled = material.node_tree.nodes.get("Principled BSDF")
     principled.inputs["Base Color"].default_value = (0.34, 0.12, 0.07, 1.0)
     principled.inputs["Roughness"].default_value = 0.47
@@ -89,7 +89,8 @@ def create_studio(human: bpy.types.Object) -> None:
 
     world = bpy.context.scene.world or bpy.data.worlds.new("Eidome World")
     bpy.context.scene.world = world
-    world.use_nodes = True
+    if world.node_tree is None:
+        world.use_nodes = True
     world.node_tree.nodes["Background"].inputs["Color"].default_value = (0.003, 0.012, 0.016, 1.0)
     world.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.18
 
@@ -104,6 +105,17 @@ def create_studio(human: bpy.types.Object) -> None:
     add_area_light("Key", (-height * 0.65, -height * 0.75, maximum.z), 900, height * 0.55, center)
     add_area_light("Fill", (height * 0.65, -height * 0.25, center.z), 650, height * 0.45, center)
     add_area_light("Rim", (0, height * 0.5, maximum.z * 0.9), 1100, height * 0.35, center)
+
+
+def select_render_engine(scene: bpy.types.Scene) -> str:
+    """Use the Eevee identifier exposed by the installed Blender build."""
+    for engine in ("BLENDER_EEVEE_NEXT", "BLENDER_EEVEE"):
+        try:
+            scene.render.engine = engine
+            return engine
+        except TypeError:
+            continue
+    raise RuntimeError("This Blender build does not expose a supported Eevee engine.")
 
 
 def main() -> None:
@@ -152,7 +164,7 @@ def main() -> None:
     )
 
     scene = bpy.context.scene
-    scene.render.engine = "BLENDER_EEVEE_NEXT"
+    render_engine = select_render_engine(scene)
     scene.render.resolution_x = 900
     scene.render.resolution_y = 1400
     scene.render.resolution_percentage = 100
@@ -162,6 +174,7 @@ def main() -> None:
     bpy.ops.render.render(write_still=True)
 
     print("Generated Eidome human:")
+    print(f"  Render engine: {render_engine}")
     print(f"  BMI-derived shape input: {bmi:.2f}")
     print(f"  Blender: {output / 'eidome-human-poc.blend'}")
     print(f"  Mobile GLB: {output / 'eidome-human-poc.glb'}")

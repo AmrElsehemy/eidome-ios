@@ -9,7 +9,8 @@ SOURCE_ROOT="${ASSET_ROOT}/source"
 REPORT_ROOT="${ASSET_ROOT}/reports"
 ARCHIVE_PATH="${SOURCE_ROOT}/z-anatomy.zip"
 BLEND_PATH="${SOURCE_ROOT}/Z-Anatomy/Startup.blend"
-SOURCE_URL="https://raw.githubusercontent.com/Z-Anatomy/Models-of-human-anatomy/master/Z-Anatomy.zip"
+SOURCE_REVISION="b9c9f98066e1e786814603b047c5bd3638c2a864"
+SOURCE_URL="https://raw.githubusercontent.com/Z-Anatomy/Models-of-human-anatomy/${SOURCE_REVISION}/Z-Anatomy.zip"
 DEFAULT_BLENDER_BIN="/Applications/Blender.app/Contents/MacOS/Blender"
 BLENDER_EXECUTABLE="${BLENDER_BIN:-${DEFAULT_BLENDER_BIN}}"
 
@@ -41,4 +42,3 @@ echo "Inspecting Z-Anatomy with Blender..."
 echo
 echo "Inventory created at:"
 echo "${REPORT_ROOT}/z-anatomy-inventory.json"
-

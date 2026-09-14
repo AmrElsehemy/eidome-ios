@@ -16,7 +16,7 @@ if [[ "$WIDTH" != "1024" || "$HEIGHT" != "1024" ]]; then
   exit 1
 fi
 
-grep -q '"filename" : "AppIcon.png"' Eidome/Assets.xcassets/AppIcon.appiconset/Contents.json
+grep -Eq '"filename"[[:space:]]*:[[:space:]]*"AppIcon\.png"' Eidome/Assets.xcassets/AppIcon.appiconset/Contents.json
 grep -q 'NSPrivacyAccessedAPICategoryUserDefaults' "$MANIFEST"
 
 if grep -RniE 'TWIN v0\.|beta|demo' Eidome --include='*.swift'; then

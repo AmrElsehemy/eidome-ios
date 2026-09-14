@@ -31,6 +31,11 @@ def parse_arguments() -> argparse.Namespace:
         default=None,
         help="Case-insensitive substring used to choose an installed MPFB skin.",
     )
+    parser.add_argument(
+        "--clothes-query",
+        default=None,
+        help="Case-insensitive substring used to choose installed MPFB clothing.",
+    )
     return parser.parse_args(arguments)
 
 
@@ -67,6 +72,15 @@ def set_studio_material(human: bpy.types.Object) -> None:
     human.data.materials.append(material)
 
 
+def has_label(path: str, label: str) -> bool:
+    # Asset names use separators such as underscores and slashes. Matching
+    # labels as tokens prevents "male" from matching inside "female".
+    return re.search(
+        rf"(?<![a-z]){re.escape(label.casefold())}(?![a-z])",
+        path.casefold(),
+    ) is not None
+
+
 def preferred_skin(
     paths: list[str],
     sex: str,
@@ -77,15 +91,6 @@ def preferred_skin(
         return None
 
     opposite_sex = "female" if sex == "male" else "male"
-
-    def has_label(path: str, label: str) -> bool:
-        # Asset names use separators such as underscores and slashes. Matching
-        # labels as tokens prevents "male" from matching inside "female".
-        return re.search(
-            rf"(?<![a-z]){re.escape(label.casefold())}(?![a-z])",
-            path.casefold(),
-        ) is not None
-
     compatible = [
         path
         for path in paths
@@ -118,11 +123,37 @@ def preferred_skin(
     return ranked[0]
 
 
+def preferred_clothes(
+    paths: list[str],
+    sex: str,
+    clothes_query: str | None,
+) -> str | None:
+    if not clothes_query:
+        return None
+
+    opposite_sex = "female" if sex == "male" else "male"
+    compatible = [
+        path
+        for path in paths
+        if has_label(path, sex) or not has_label(path, opposite_sex)
+    ]
+    query = clothes_query.casefold()
+    matches = [path for path in compatible if query in path.casefold()]
+    if not matches:
+        available = ", ".join(sorted(Path(path).stem for path in compatible))
+        raise RuntimeError(
+            f"No installed {sex} or neutral clothing matches {clothes_query!r}. "
+            f"Available compatible clothes: {available or 'none'}"
+        )
+    return sorted(matches, key=str.casefold)[0]
+
+
 def apply_installed_assets(
     human: bpy.types.Object,
     sex: str,
     age: float,
     skin_query: str | None,
+    clothes_query: str | None,
     AssetService,
     HumanService,
 ) -> dict[str, str]:
@@ -155,6 +186,21 @@ def apply_installed_assets(
             material_type="GAMEENGINE",
         )
         applied["eyes"] = str(eyes)
+
+    clothes = preferred_clothes(
+        [str(path) for path in AssetService.list_mhclo_assets("clothes")],
+        sex,
+        clothes_query,
+    )
+    if clothes:
+        HumanService.add_mhclo_asset(
+            clothes,
+            human,
+            asset_type="Clothes",
+            subdiv_levels=0,
+            material_type="GAMEENGINE",
+        )
+        applied["clothes"] = clothes
 
     return applied
 
@@ -259,6 +305,7 @@ def main() -> None:
         args.sex,
         args.age,
         args.skin_query,
+        args.clothes_query,
         AssetService,
         HumanService,
     )
@@ -291,6 +338,7 @@ def main() -> None:
     print(f"  Render engine: {render_engine}")
     print(f"  Installed skin: {applied_assets.get('skin', 'not found; using study material')}")
     print(f"  Installed eyes: {applied_assets.get('eyes', 'not found')}")
+    print(f"  Installed clothes: {applied_assets.get('clothes', 'not requested')}")
     print(f"  BMI-derived shape input: {bmi:.2f}")
     print(f"  Blender: {output / 'eidome-human-poc.blend'}")
     print(f"  Mobile GLB: {output / 'eidome-human-poc.glb'}")

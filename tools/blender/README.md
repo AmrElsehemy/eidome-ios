@@ -36,7 +36,11 @@ Install the free MPFB extension once:
 1. Open Blender.
 2. Choose **Edit > Preferences > Get Extensions**.
 3. Search for **MPFB**, install it, and make sure it is enabled.
-4. Close Blender so the preference is saved.
+4. Download the **makehuman system assets** pack from the official MPFB asset packs page.
+5. In Blender's MPFB panel, open **Apply Assets > Library Settings**, choose
+   **Load pack from zip file**, and select the downloaded pack without
+   extracting it.
+6. Restart Blender so the extension and asset index are fully loaded.
 
 Then pull this branch and run:
 
@@ -56,6 +60,10 @@ This creates:
 .eidome-assets/generated/human-poc/eidome-human-poc.glb
 .eidome-assets/generated/human-poc/eidome-human-poc.png
 ```
+
+The generator automatically uses a suitable installed skin and the system
+high-poly eyes. If the asset pack is missing, its console summary explicitly
+reports that it fell back to the study material and could not find eyes.
 
 The `.blend` file is the editable source, the `.glb` is the mobile interchange
 asset, and the `.png` is a quick visual checkpoint. These outputs are local and

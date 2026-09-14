@@ -34,3 +34,18 @@ replacement or permission.
 
 Before any derived model is distributed, create a structure-level manifest,
 retain required attribution, and obtain a legal review of the ShareAlike impact.
+
+## MPFB prototype skin and clothing
+
+- Skin: `toigo_light_skin_male_bronze`
+- Skin source pack: MakeHuman Skins 02
+- Skin licence: CC0
+- Clothing: `elvs_male_swim_shorts1`
+- Clothing source pack: MakeHuman Pants 03
+- Clothing author: Elvaerwyn
+- Clothing licence: CC BY
+- Prototype use: validate fitted clothing, rigging, posing, and mobile export
+- Shipping status: not included in the Eidome application
+
+If the clothing enters a distributed build, preserve the author attribution and
+licence notice in the app's acknowledgements and release documentation.

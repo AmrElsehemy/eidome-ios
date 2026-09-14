@@ -8,6 +8,7 @@ not a final commercial-licensing decision.
 - Project: Z-Anatomy / Models of Human Anatomy
 - Source: https://github.com/Z-Anatomy/Models-of-human-anatomy
 - Prototype source file: `Z-Anatomy.zip` / `Startup.blend`
+- Pinned revision: `b9c9f98066e1e786814603b047c5bd3638c2a864`
 - Repository declaration: CC BY-SA 4.0
 - Upstream foundation: BodyParts3D, CC BY-SA 2.1 Japan
 - Local use: private evaluation, object inventory, mobile optimization spike
@@ -20,4 +21,3 @@ replacement or permission.
 
 Before any derived model is distributed, create a structure-level manifest,
 retain required attribution, and obtain a legal review of the ShareAlike impact.
-

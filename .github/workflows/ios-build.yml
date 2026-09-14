@@ -36,7 +36,21 @@ jobs:
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO \
+            SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
             clean build | xcpretty
+
+      - name: Static analysis
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project Eidome.xcodeproj \
+            -scheme Eidome \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
+            analyze | xcpretty
 
       - name: Release device archive
         run: |
@@ -49,6 +63,7 @@ jobs:
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/Eidome.xcarchive" \
             CODE_SIGNING_ALLOWED=NO \
+            SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
             clean archive | xcpretty
 
           test -d "$RUNNER_TEMP/Eidome.xcarchive/Products/Applications/Eidome.app"

@@ -10,13 +10,23 @@ enum TwinBodyLayer: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    var symbol: String {
+    private var preferredSymbol: String {
         switch self {
         case .body: "figure.stand"
         case .muscles: "figure.strengthtraining.traditional"
-        case .skeleton: "xray"
+        case .skeleton: "viewfinder"
         case .joints: "circle.grid.cross"
         }
+    }
+
+    var symbol: String {
+        UIImage(systemName: preferredSymbol) == nil ? "circle.dashed" : preferredSymbol
+    }
+
+    static var invalidSystemSymbols: [String] {
+        allCases
+            .map(\.preferredSymbol)
+            .filter { UIImage(systemName: $0) == nil }
     }
 
     var modelNote: String {

@@ -18,6 +18,7 @@ mkdir -p "${OUTPUT_ROOT}"
 
 "${BLENDER_EXECUTABLE}" \
   --background \
+  --python-exit-code 1 \
   --python "${SCRIPT_DIR}/create_human_poc.py" \
   -- \
   --output "${OUTPUT_ROOT}" \

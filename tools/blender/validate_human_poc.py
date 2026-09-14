@@ -32,40 +32,72 @@ def world_bounds(obj: bpy.types.Object) -> tuple[Vector, Vector]:
     return minimum, maximum
 
 
-def deformation_metrics(obj: bpy.types.Object) -> dict[str, float]:
+def evaluated_geometry(
+    obj: bpy.types.Object,
+) -> tuple[list[Vector], list[tuple[int, int]]]:
+    """Return a stable snapshot of evaluated local-space mesh geometry."""
     depsgraph = bpy.context.evaluated_depsgraph_get()
     evaluated = obj.evaluated_get(depsgraph)
     mesh = evaluated.to_mesh()
     try:
-        if len(mesh.vertices) != len(obj.data.vertices):
-            raise RuntimeError(
-                "Body topology changed during evaluation; edge deformation cannot be validated."
-            )
-
-        ratios: list[float] = []
-        for edge in obj.data.edges:
-            first, second = edge.vertices
-            rest_length = (
-                obj.data.vertices[first].co - obj.data.vertices[second].co
-            ).length
-            if rest_length <= 1e-8:
-                continue
-            posed_length = (
-                mesh.vertices[first].co - mesh.vertices[second].co
-            ).length
-            ratios.append(posed_length / rest_length)
-
-        if not ratios:
-            raise RuntimeError("No body edges were available for deformation validation.")
-
-        ratios.sort()
-        percentile_index = min(len(ratios) - 1, int(len(ratios) * 0.999))
-        return {
-            "maximum_edge_stretch": ratios[-1],
-            "p99_9_edge_stretch": ratios[percentile_index],
-        }
+        vertices = [vertex.co.copy() for vertex in mesh.vertices]
+        edges = [tuple(edge.vertices) for edge in mesh.edges]
+        return vertices, edges
     finally:
         evaluated.to_mesh_clear()
+
+
+def deformation_metrics(obj: bpy.types.Object) -> dict[str, float]:
+    """Measure armature deformation without assuming raw/evaluated topology matches.
+
+    MPFB's body contains topology-changing helper/mask modifiers. Comparing its raw
+    mesh directly with Blender's fully evaluated mesh therefore rejects healthy
+    avatars. Instead, evaluate the same modifier stack twice—with armature
+    modifiers disabled and enabled—and compare those two compatible meshes.
+    """
+    armature_modifiers = [modifier for modifier in obj.modifiers if modifier.type == "ARMATURE"]
+    if not armature_modifiers:
+        raise RuntimeError("Human mesh has no armature modifier to validate.")
+
+    original_states = [modifier.show_viewport for modifier in armature_modifiers]
+    try:
+        for modifier in armature_modifiers:
+            modifier.show_viewport = False
+        bpy.context.view_layer.update()
+        rest_vertices, rest_edges = evaluated_geometry(obj)
+
+        for modifier, state in zip(armature_modifiers, original_states, strict=True):
+            modifier.show_viewport = state
+        bpy.context.view_layer.update()
+        posed_vertices, posed_edges = evaluated_geometry(obj)
+    finally:
+        for modifier, state in zip(armature_modifiers, original_states, strict=True):
+            modifier.show_viewport = state
+        bpy.context.view_layer.update()
+
+    if len(rest_vertices) != len(posed_vertices) or rest_edges != posed_edges:
+        raise RuntimeError(
+            "Body topology changed when armature evaluation was toggled; "
+            "deformation cannot be compared safely."
+        )
+
+    ratios: list[float] = []
+    for first, second in rest_edges:
+        rest_length = (rest_vertices[first] - rest_vertices[second]).length
+        if rest_length <= 1e-8:
+            continue
+        posed_length = (posed_vertices[first] - posed_vertices[second]).length
+        ratios.append(posed_length / rest_length)
+
+    if not ratios:
+        raise RuntimeError("No body edges were available for deformation validation.")
+
+    ratios.sort()
+    percentile_index = min(len(ratios) - 1, int(len(ratios) * 0.999))
+    return {
+        "maximum_edge_stretch": ratios[-1],
+        "p99_9_edge_stretch": ratios[percentile_index],
+    }
 
 
 def main() -> None:
@@ -81,9 +113,7 @@ def main() -> None:
     meshes = [obj for obj in bpy.context.scene.objects if obj.type == "MESH"]
     armatures = [obj for obj in bpy.context.scene.objects if obj.type == "ARMATURE"]
     if len(meshes) < 3:
-        raise RuntimeError(
-            f"Expected body, eyes, and clothing meshes; found {len(meshes)}."
-        )
+        raise RuntimeError(f"Expected body, eyes, and clothing meshes; found {len(meshes)}.")
     if len(armatures) != 1:
         raise RuntimeError(f"Expected exactly one armature; found {len(armatures)}.")
 
@@ -94,14 +124,11 @@ def main() -> None:
     deformation = deformation_metrics(body)
 
     if not 0.15 <= width_to_height <= 1.10:
-        raise RuntimeError(
-            f"Implausible body width/height ratio: {width_to_height:.3f}."
-        )
+        raise RuntimeError(f"Implausible body width/height ratio: {width_to_height:.3f}.")
     if deformation["p99_9_edge_stretch"] > 2.0:
         raise RuntimeError(
             "Pathological mesh deformation detected: "
-            f"99.9th-percentile edge stretch is "
-            f"{deformation['p99_9_edge_stretch']:.3f}x."
+            f"99.9th-percentile edge stretch is {deformation['p99_9_edge_stretch']:.3f}x."
         )
     if deformation["maximum_edge_stretch"] > 8.0:
         raise RuntimeError(

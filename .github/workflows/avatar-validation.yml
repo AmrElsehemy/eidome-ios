@@ -2,14 +2,26 @@ name: Avatar Validation
 
 on:
   workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch or commit containing the avatar pipeline
+        required: true
+        default: feature/v0.05-human-avatar
+        type: string
 
 permissions:
   contents: read
 
+concurrency:
+  group: avatar-validation-${{ github.repository }}
+  cancel-in-progress: false
+
 jobs:
   validate:
     name: Render and validate avatar
+    if: ${{ github.actor == github.repository_owner }}
     runs-on: [self-hosted, macOS, ARM64]
+    environment: avatar-validation
     timeout-minutes: 15
 
     env:
@@ -17,8 +29,11 @@ jobs:
       OUTPUT_ROOT: ${{ github.workspace }}/.eidome-assets/generated/human-poc
 
     steps:
-      - name: Check out branch
+      - name: Check out selected avatar revision
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
 
       - name: Verify Blender installation
         run: |
@@ -27,6 +42,7 @@ jobs:
 
       - name: Generate known-good avatar
         run: |
+          set -o pipefail
           bash tools/blender/build_human_poc.sh \
             --name "Amr" \
             --sex male \
@@ -40,6 +56,7 @@ jobs:
 
       - name: Validate artifacts and deformation
         run: |
+          set -o pipefail
           "$BLENDER_BIN" \
             --background "$OUTPUT_ROOT/eidome-human-poc.blend" \
             --python-exit-code 1 \
@@ -50,6 +67,7 @@ jobs:
             --preview "$OUTPUT_ROOT/eidome-human-poc.png" \
             --report "$OUTPUT_ROOT/validation.json" \
             2>&1 | tee "$RUNNER_TEMP/eidome-avatar-validation.log"
+          test -s "$OUTPUT_ROOT/validation.json"
 
       - name: Upload validation evidence
         if: always()

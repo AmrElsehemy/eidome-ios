@@ -4,7 +4,7 @@ This directory contains the reproducible source-asset pipeline for Eidome's
 human avatar. The large third-party Blender sources and generated reports stay
 outside Git and are stored under `.eidome-assets/`.
 
-## First inspection
+## 1. Inspect the anatomy source
 
 Requirements:
 
@@ -29,11 +29,46 @@ The first run downloads approximately 87 MB and extracts a Blender source file
 of approximately 307 MB. The inspection is read-only and never saves over the
 source file.
 
-If Blender is installed elsewhere:
+## 2. Generate the realistic exterior POC
+
+Install the free MPFB extension once:
+
+1. Open Blender.
+2. Choose **Edit > Preferences > Get Extensions**.
+3. Search for **MPFB**, install it, and make sure it is enabled.
+4. Close Blender so the preference is saved.
+
+Then pull this branch and run:
 
 ```bash
-BLENDER_BIN="/path/to/blender" bash tools/blender/bootstrap_z_anatomy.sh
+bash tools/blender/build_human_poc.sh \
+  --name "Amr" \
+  --sex male \
+  --age 40 \
+  --height-cm 175 \
+  --weight-kg 75
 ```
 
-Do not commit the downloaded source, reports, or generated intermediate assets.
+This creates:
 
+```text
+.eidome-assets/generated/human-poc/eidome-human-poc.blend
+.eidome-assets/generated/human-poc/eidome-human-poc.glb
+.eidome-assets/generated/human-poc/eidome-human-poc.png
+```
+
+The `.blend` file is the editable source, the `.glb` is the mobile interchange
+asset, and the `.png` is a quick visual checkpoint. These outputs are local and
+must not be committed.
+
+The current measurement mapping is intentionally marked as **estimated**. It
+uses height directly and derives a normalized body-shape input from BMI. Later
+versions will add waist, chest, hip, limb, and scan-driven controls.
+
+If Blender is installed elsewhere, prefix either command with:
+
+```bash
+BLENDER_BIN="/path/to/blender"
+```
+
+Do not commit downloaded sources, reports, or generated intermediate assets.

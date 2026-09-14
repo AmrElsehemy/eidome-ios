@@ -10,9 +10,16 @@ Every feature must contribute at least one of these: a measurable metric, a mode
 
 All twin data must remain distinguishable as measured, derived or estimated. Never imply medical accuracy from a parametric body model.
 
-## v0.03 boundary
+## v0.04 boundary
 
-Keep v0.03 focused on interactive body, muscle, skeleton and joint layers over the personalized twin geometry. Anatomy is a visual reference with estimated proportions, not a scan of the user's internal structures. HealthKit, accounts, video analysis and cloud infrastructure belong to later versions.
+Keep v0.04 focused on interactive anatomical layers, measured mobility and a reusable review-ready foundation. Anatomy is a visual reference with estimated proportions, not a scan of the user's internal structures. HealthKit, accounts, video analysis and cloud infrastructure belong to later versions.
+
+## Release rule
+
+- Privacy and support must be reachable before personal data entry.
+- Every profile and all local data must be deletable in-app.
+- Customer-facing UI must not contain beta/demo or internal milestone labels.
+- Any new protected data source must add its permission purpose, privacy declaration and denial path in the same change.
 
 ## Technical direction
 

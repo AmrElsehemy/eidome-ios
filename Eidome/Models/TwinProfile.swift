@@ -24,6 +24,44 @@ struct BodyMeasurements: Codable, Hashable {
     var isEmpty: Bool { completedCount == 0 }
 }
 
+struct MobilityProfile: Codable, Hashable {
+    var leftAnkleDorsiflexion: Double? = nil
+    var rightAnkleDorsiflexion: Double? = nil
+    var leftHipInternalRotation: Double? = nil
+    var rightHipInternalRotation: Double? = nil
+    var leftShoulderFlexion: Double? = nil
+    var rightShoulderFlexion: Double? = nil
+    var leftThoracicRotation: Double? = nil
+    var rightThoracicRotation: Double? = nil
+
+    var values: [Double] {
+        [
+            leftAnkleDorsiflexion, rightAnkleDorsiflexion,
+            leftHipInternalRotation, rightHipInternalRotation,
+            leftShoulderFlexion, rightShoulderFlexion,
+            leftThoracicRotation, rightThoracicRotation
+        ].compactMap { $0 }
+    }
+
+    var completedCount: Int { values.count }
+    var isEmpty: Bool { completedCount == 0 }
+
+    var largestAsymmetry: Double? {
+        let pairs = [
+            pairedDifference(leftAnkleDorsiflexion, rightAnkleDorsiflexion),
+            pairedDifference(leftHipInternalRotation, rightHipInternalRotation),
+            pairedDifference(leftShoulderFlexion, rightShoulderFlexion),
+            pairedDifference(leftThoracicRotation, rightThoracicRotation)
+        ].compactMap { $0 }
+        return pairs.max()
+    }
+
+    private func pairedDifference(_ left: Double?, _ right: Double?) -> Double? {
+        guard let left, let right else { return nil }
+        return abs(left - right)
+    }
+}
+
 struct TwinProfile: Identifiable, Codable, Hashable {
     enum Relationship: String, Codable, CaseIterable, Identifiable {
         case me = "Me"
@@ -49,6 +87,7 @@ struct TwinProfile: Identifiable, Codable, Hashable {
     var weightKilograms: Double
     var createdAt: Date
     var bodyMeasurements: BodyMeasurements?
+    var mobilityProfile: MobilityProfile?
 
     init(
         id: UUID = UUID(),
@@ -59,7 +98,8 @@ struct TwinProfile: Identifiable, Codable, Hashable {
         heightCentimeters: Double,
         weightKilograms: Double,
         createdAt: Date = .now,
-        bodyMeasurements: BodyMeasurements? = nil
+        bodyMeasurements: BodyMeasurements? = nil,
+        mobilityProfile: MobilityProfile? = nil
     ) {
         self.id = id
         self.name = name
@@ -70,6 +110,7 @@ struct TwinProfile: Identifiable, Codable, Hashable {
         self.weightKilograms = weightKilograms
         self.createdAt = createdAt
         self.bodyMeasurements = bodyMeasurements
+        self.mobilityProfile = mobilityProfile
     }
 
     var age: Int {
@@ -84,7 +125,10 @@ struct TwinProfile: Identifiable, Codable, Hashable {
 
     var completeness: Int {
         let measuredShapeInputs = bodyMeasurements?.completedCount ?? 0
-        return min(24, 8 + Int((Double(measuredShapeInputs) / 7.0 * 16.0).rounded()))
+        let shapeScore = Int((Double(measuredShapeInputs) / 7.0 * 16.0).rounded())
+        let mobilityInputs = mobilityProfile?.completedCount ?? 0
+        let mobilityScore = Int((Double(mobilityInputs) / 8.0 * 14.0).rounded())
+        return min(38, 8 + shapeScore + mobilityScore)
     }
 }
 

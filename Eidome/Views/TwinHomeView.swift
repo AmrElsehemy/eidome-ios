@@ -6,6 +6,8 @@ struct TwinHomeView: View {
     @State private var isShowingDetails = false
     @State private var isRefiningTwin = false
     @State private var selectedLayer: TwinBodyLayer = .body
+    @State private var isEditingMobility = false
+    @State private var isShowingSettings = false
 
     var body: some View {
         ZStack {
@@ -19,6 +21,7 @@ struct TwinHomeView: View {
                         twinStage(profile)
                         identityCard(profile)
                         improveCard(profile)
+                        mobilityCard(profile)
                     }
                     .padding(.bottom, 28)
                 }
@@ -37,6 +40,14 @@ struct TwinHomeView: View {
             if let profile = profileStore.selectedProfile {
                 RefineTwinView(profile: profile)
             }
+        }
+        .sheet(isPresented: $isEditingMobility) {
+            if let profile = profileStore.selectedProfile {
+                MobilityEditorView(profile: profile)
+            }
+        }
+        .sheet(isPresented: $isShowingSettings) {
+            AppSettingsView()
         }
     }
 
@@ -59,6 +70,17 @@ struct TwinHomeView: View {
                     .font(.title2.bold())
             }
             Spacer()
+            Button {
+                isShowingSettings = true
+            } label: {
+                Image(systemName: "info.circle")
+                    .font(.title3)
+                    .frame(width: 44, height: 44)
+                    .background(EidomeTheme.panel, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("About, privacy, and support")
+
             Button {
                 isShowingProfiles = true
             } label: {
@@ -144,7 +166,7 @@ struct TwinHomeView: View {
         VStack(spacing: 18) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("TWIN v0.03")
+                    Text("DIGITAL TWIN")
                         .font(.caption.bold())
                         .tracking(1.2)
                         .foregroundStyle(EidomeTheme.secondaryText)
@@ -206,6 +228,35 @@ struct TwinHomeView: View {
         .padding(.top, 14)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Shape this twin with body measurements.")
+    }
+
+    private func mobilityCard(_ profile: TwinProfile) -> some View {
+        Button {
+            isEditingMobility = true
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: "figure.flexibility")
+                    .font(.title2)
+                    .foregroundStyle(EidomeTheme.cyan)
+                    .frame(width: 44, height: 44)
+                    .background(EidomeTheme.cyan.opacity(0.12), in: Circle())
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Map mobility")
+                        .font(.headline)
+                    Text("\(profile.mobilityProfile?.completedCount ?? 0) of 8 joint ranges measured")
+                        .font(.caption)
+                        .foregroundStyle(EidomeTheme.secondaryText)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .foregroundStyle(EidomeTheme.secondaryText)
+            }
+            .padding(18)
+            .glassCard()
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 20)
+        .padding(.top, 14)
     }
 
     private func completenessRing(_ value: Int) -> some View {

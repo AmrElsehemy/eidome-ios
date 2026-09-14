@@ -35,6 +35,25 @@ final class ProfileStore: ObservableObject {
         save()
     }
 
+    func delete(_ profile: TwinProfile) {
+        profiles.removeAll { $0.id == profile.id }
+
+        if selectedProfileID == profile.id || selectedProfile == nil {
+            selectedProfileID = profiles.first?.id
+        }
+
+        save()
+    }
+
+    func deleteAllData() {
+        profiles = []
+        selectedProfileID = nil
+
+        let defaults = UserDefaults.standard
+        [profilesKey, selectedProfileKey, legacyProfilesKey, legacySelectedProfileKey]
+            .forEach { defaults.removeObject(forKey: $0) }
+    }
+
     private func load() {
         let defaults = UserDefaults.standard
         let data = defaults.data(forKey: profilesKey) ?? defaults.data(forKey: legacyProfilesKey)
@@ -59,6 +78,11 @@ final class ProfileStore: ObservableObject {
         if let data = try? JSONEncoder().encode(profiles) {
             UserDefaults.standard.set(data, forKey: profilesKey)
         }
-        UserDefaults.standard.set(selectedProfileID?.uuidString, forKey: selectedProfileKey)
+
+        if let selectedProfileID {
+            UserDefaults.standard.set(selectedProfileID.uuidString, forKey: selectedProfileKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: selectedProfileKey)
+        }
     }
 }

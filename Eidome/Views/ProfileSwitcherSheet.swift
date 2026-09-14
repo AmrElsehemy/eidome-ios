@@ -4,6 +4,7 @@ struct ProfileSwitcherSheet: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var profileStore: ProfileStore
     @State private var isAddingProfile = false
+    @State private var profilePendingDeletion: TwinProfile?
 
     var body: some View {
         NavigationStack {
@@ -31,6 +32,13 @@ struct ProfileSwitcherSheet: View {
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                profilePendingDeletion = profile
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
                     }
                 }
 
@@ -54,6 +62,28 @@ struct ProfileSwitcherSheet: View {
                 NavigationStack {
                     CreateTwinView(defaultRelationship: .child)
                 }
+            }
+            .confirmationDialog(
+                "Delete this twin?",
+                isPresented: Binding(
+                    get: { profilePendingDeletion != nil },
+                    set: { if !$0 { profilePendingDeletion = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button("Delete \(profilePendingDeletion?.name ?? "twin")", role: .destructive) {
+                    guard let profilePendingDeletion else { return }
+                    profileStore.delete(profilePendingDeletion)
+                    self.profilePendingDeletion = nil
+                    if profileStore.profiles.isEmpty {
+                        dismiss()
+                    }
+                }
+                Button("Cancel", role: .cancel) {
+                    profilePendingDeletion = nil
+                }
+            } message: {
+                Text("This permanently removes the profile and its measurements from this device.")
             }
         }
         .preferredColorScheme(.dark)

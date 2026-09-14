@@ -210,13 +210,11 @@ def apply_relaxed_pose(rig: bpy.types.Object, RigService) -> None:
     pose = {
         "skeleton_type": "game_engine",
         "bone_rotations": {
-            # MPFB's base mesh starts in an A-pose. Rotate the upper arms
-            # toward the torso while retaining enough clearance for rotation.
-            "upperarm_l": [0.0, 0.0, -0.40],
-            "upperarm_r": [0.0, 0.0, 0.40],
-            # A small elbow bend prevents the silhouette looking locked.
-            "lowerarm_l": [-0.10, 0.0, 0.0],
-            "lowerarm_r": [-0.10, 0.0, 0.0],
+            # MPFB's game-engine bones use mirrored local Z axes. Positive on
+            # the left and negative on the right lower the arms toward the
+            # torso while retaining a little clearance for rotation.
+            "upperarm_l": [0.0, 0.0, 0.40],
+            "upperarm_r": [0.0, 0.0, -0.40],
         },
         "bone_translations": {},
         "has_ik_bones": False,

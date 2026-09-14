@@ -2,8 +2,36 @@ import SceneKit
 import SwiftUI
 import UIKit
 
+enum TwinBodyLayer: String, CaseIterable, Identifiable {
+    case body = "Body"
+    case muscles = "Muscles"
+    case skeleton = "Skeleton"
+    case joints = "Joints"
+
+    var id: String { rawValue }
+
+    var symbol: String {
+        switch self {
+        case .body: "figure.stand"
+        case .muscles: "figure.strengthtraining.traditional"
+        case .skeleton: "xray"
+        case .joints: "circle.grid.cross"
+        }
+    }
+
+    var modelNote: String {
+        switch self {
+        case .body: "Personalized estimate"
+        case .muscles: "Reference muscles · personalized shape"
+        case .skeleton: "Reference skeleton · estimated proportions"
+        case .joints: "Reference joint map · estimated positions"
+        }
+    }
+}
+
 struct TwinSceneView: UIViewRepresentable {
     let profile: TwinProfile
+    var layer: TwinBodyLayer = .body
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -15,32 +43,39 @@ struct TwinSceneView: UIViewRepresentable {
         view.defaultCameraController.interactionMode = .orbitTurntable
         view.defaultCameraController.inertiaEnabled = true
         view.autoenablesDefaultLighting = false
-        configureScene(in: view, profile: profile)
+        configureScene(in: view, profile: profile, layer: layer)
         context.coordinator.lastProfile = profile
+        context.coordinator.lastLayer = layer
         return view
     }
 
     func updateUIView(_ view: SCNView, context: Context) {
-        guard context.coordinator.lastProfile != profile else { return }
-        configureScene(in: view, profile: profile)
+        guard context.coordinator.lastProfile != profile || context.coordinator.lastLayer != layer else { return }
+        configureScene(in: view, profile: profile, layer: layer)
         context.coordinator.lastProfile = profile
+        context.coordinator.lastLayer = layer
     }
 
     final class Coordinator {
         var lastProfile: TwinProfile?
+        var lastLayer: TwinBodyLayer?
     }
 
-    private func configureScene(in view: SCNView, profile: TwinProfile) {
+    private func configureScene(in view: SCNView, profile: TwinProfile, layer: TwinBodyLayer) {
+        let previousCameraTransform = view.pointOfView?.presentation.transform
         let scene = SCNScene()
-        let body = makeBody(for: profile)
-        scene.rootNode.addChildNode(body)
-        scene.rootNode.addChildNode(makeGroundRing(for: profile))
+        scene.rootNode.addChildNode(makeBody(for: profile, layer: layer))
+        scene.rootNode.addChildNode(makeGroundRing(for: profile, layer: layer))
 
         let camera = SCNNode()
         camera.camera = SCNCamera()
         camera.camera?.fieldOfView = 31
-        camera.position = SCNVector3(0, 0.08, 3.45)
-        camera.look(at: SCNVector3(0, 0.02, 0))
+        if let previousCameraTransform {
+            camera.transform = previousCameraTransform
+        } else {
+            camera.position = SCNVector3(0, 0.08, 3.45)
+            camera.look(at: SCNVector3(0, 0.02, 0))
+        }
         scene.rootNode.addChildNode(camera)
 
         let keyLight = SCNNode()
@@ -62,7 +97,7 @@ struct TwinSceneView: UIViewRepresentable {
         let ambient = SCNNode()
         ambient.light = SCNLight()
         ambient.light?.type = .ambient
-        ambient.light?.intensity = 260
+        ambient.light?.intensity = layer == .skeleton ? 420 : 260
         ambient.light?.color = UIColor(white: 0.48, alpha: 1)
         scene.rootNode.addChildNode(ambient)
 
@@ -70,82 +105,218 @@ struct TwinSceneView: UIViewRepresentable {
         view.pointOfView = camera
     }
 
-    private func makeBody(for profile: TwinProfile) -> SCNNode {
+    private func makeBody(for profile: TwinProfile, layer: TwinBodyLayer) -> SCNNode {
+        switch layer {
+        case .body:
+            makeExteriorBody(for: profile)
+        case .muscles:
+            makeMuscleBody(for: profile)
+        case .skeleton:
+            makeSkeletonBody(for: profile)
+        case .joints:
+            makeJointBody(for: profile)
+        }
+    }
+
+    private func makeExteriorBody(
+        for profile: TwinProfile,
+        material: SCNMaterial? = nil,
+        jointMaterial: SCNMaterial? = nil
+    ) -> SCNNode {
         let g = BodyGeometry(profile: profile)
         let root = SCNNode()
-        let material = bodyMaterial()
-        let jointMaterial = glowMaterial()
+        let surface = material ?? bodyMaterial()
+        let joints = jointMaterial ?? glowMaterial()
+        let p = bodyPositions(g)
 
-        let floorY = -g.totalHeight / 2
-        let hipY = floorY + g.legLength
-        let shoulderY = hipY + g.torsoHeight * 0.88
-        let neckY = hipY + g.torsoHeight + g.headRadius * 0.28
-        let headY = neckY + g.headRadius * 1.18
+        addEllipsoid(to: root, radii: SCNVector3(g.headRadius * 0.82, g.headRadius, g.headRadius * 0.83), at: SCNVector3(0, p.headY, 0), material: surface)
+        addCapsule(to: root, radius: g.headRadius * 0.34, height: g.headRadius * 0.75, at: SCNVector3(0, p.neckY, 0), material: surface)
+        addEllipsoid(to: root, radii: SCNVector3(g.chestWidth / 2, g.torsoHeight * 0.32, g.chestDepth / 2), at: SCNVector3(0, p.hipY + g.torsoHeight * 0.68, 0), material: surface)
+        addEllipsoid(to: root, radii: SCNVector3(g.waistWidth / 2, g.torsoHeight * 0.27, g.waistDepth / 2), at: SCNVector3(0, p.hipY + g.torsoHeight * 0.35, 0), material: surface)
+        addEllipsoid(to: root, radii: SCNVector3(g.hipWidth / 2, g.torsoHeight * 0.18, g.hipDepth / 2), at: SCNVector3(0, p.hipY + g.torsoHeight * 0.08, 0), material: surface)
+        addEllipsoid(to: root, radii: SCNVector3(g.shoulderWidth / 2, g.totalHeight * 0.045, g.chestDepth * 0.50), at: SCNVector3(0, p.shoulderY, 0), material: surface)
 
-        addEllipsoid(to: root, radii: SCNVector3(g.headRadius * 0.82, g.headRadius, g.headRadius * 0.83), at: SCNVector3(0, headY, 0), material: material)
-        addCapsule(to: root, radius: g.headRadius * 0.34, height: g.headRadius * 0.75, at: SCNVector3(0, neckY, 0), material: material)
-
-        addEllipsoid(
-            to: root,
-            radii: SCNVector3(g.chestWidth / 2, g.torsoHeight * 0.32, g.chestDepth / 2),
-            at: SCNVector3(0, hipY + g.torsoHeight * 0.68, 0),
-            material: material
-        )
-        addEllipsoid(
-            to: root,
-            radii: SCNVector3(g.waistWidth / 2, g.torsoHeight * 0.27, g.waistDepth / 2),
-            at: SCNVector3(0, hipY + g.torsoHeight * 0.35, 0),
-            material: material
-        )
-        addEllipsoid(
-            to: root,
-            radii: SCNVector3(g.hipWidth / 2, g.torsoHeight * 0.18, g.hipDepth / 2),
-            at: SCNVector3(0, hipY + g.torsoHeight * 0.08, 0),
-            material: material
-        )
-        addEllipsoid(
-            to: root,
-            radii: SCNVector3(g.shoulderWidth / 2, g.totalHeight * 0.045, g.chestDepth * 0.50),
-            at: SCNVector3(0, shoulderY, 0),
-            material: material
-        )
-
-        let armX = g.shoulderWidth * 0.57
-        let armY = shoulderY - g.armLength * 0.48
         for side: Float in [-1, 1] {
-            addCapsule(to: root, radius: g.armRadius, height: g.armLength, at: SCNVector3(side * armX, armY, 0), material: material)
-            addSphere(to: root, radius: g.armRadius * 1.10, at: SCNVector3(side * armX, shoulderY, 0), material: jointMaterial)
-            addEllipsoid(to: root, radii: SCNVector3(g.armRadius * 0.92, g.armRadius * 1.55, g.armRadius * 0.72), at: SCNVector3(side * armX, armY - g.armLength * 0.55, 0), material: material)
+            addCapsule(to: root, radius: g.armRadius, height: g.armLength, at: SCNVector3(side * p.armX, p.armY, 0), material: surface)
+            addSphere(to: root, radius: g.armRadius * 1.10, at: SCNVector3(side * p.armX, p.shoulderY, 0), material: joints)
+            addEllipsoid(to: root, radii: SCNVector3(g.armRadius * 0.92, g.armRadius * 1.55, g.armRadius * 0.72), at: SCNVector3(side * p.armX, p.armY - g.armLength * 0.55, 0), material: surface)
         }
 
-        let legX = g.hipWidth * 0.28
         let thighLength = g.legLength * 0.52
         let calfLength = g.legLength * 0.48
-        let kneeY = floorY + calfLength
+        let kneeY = p.floorY + calfLength
         for side: Float in [-1, 1] {
-            addCapsule(to: root, radius: g.thighRadius, height: thighLength, at: SCNVector3(side * legX, kneeY + thighLength / 2, 0), material: material)
-            addCapsule(to: root, radius: g.calfRadius, height: calfLength, at: SCNVector3(side * legX, floorY + calfLength / 2, 0), material: material)
-            addSphere(to: root, radius: g.calfRadius * 0.90, at: SCNVector3(side * legX, kneeY, 0), material: jointMaterial)
-            addSphere(to: root, radius: g.thighRadius, at: SCNVector3(side * legX, hipY, 0), material: jointMaterial)
-            addEllipsoid(to: root, radii: SCNVector3(g.calfRadius * 0.95, g.calfRadius * 0.55, g.calfRadius * 1.65), at: SCNVector3(side * legX, floorY - g.calfRadius * 0.05, g.calfRadius * 0.62), material: material)
+            addCapsule(to: root, radius: g.thighRadius, height: thighLength, at: SCNVector3(side * p.legX, kneeY + thighLength / 2, 0), material: surface)
+            addCapsule(to: root, radius: g.calfRadius, height: calfLength, at: SCNVector3(side * p.legX, p.floorY + calfLength / 2, 0), material: surface)
+            addSphere(to: root, radius: g.calfRadius * 0.90, at: SCNVector3(side * p.legX, kneeY, 0), material: joints)
+            addSphere(to: root, radius: g.thighRadius, at: SCNVector3(side * p.legX, p.hipY, 0), material: joints)
+            addEllipsoid(to: root, radii: SCNVector3(g.calfRadius * 0.95, g.calfRadius * 0.55, g.calfRadius * 1.65), at: SCNVector3(side * p.legX, p.floorY - g.calfRadius * 0.05, g.calfRadius * 0.62), material: surface)
         }
 
         root.eulerAngles.y = -.pi / 12
         return root
     }
 
-    private func makeGroundRing(for profile: TwinProfile) -> SCNNode {
-        let geometry = BodyGeometry(profile: profile)
-        let torus = SCNTorus(
-            ringRadius: CGFloat(geometry.shoulderWidth * 0.92),
-            pipeRadius: 0.004
+    private func makeMuscleBody(for profile: TwinProfile) -> SCNNode {
+        let g = BodyGeometry(profile: profile)
+        let p = bodyPositions(g)
+        let root = SCNNode()
+        let muscle = muscleMaterial()
+        let muscleLight = muscleMaterial(light: true)
+        let tendon = tendonMaterial()
+
+        addEllipsoid(to: root, radii: SCNVector3(g.headRadius * 0.78, g.headRadius * 0.96, g.headRadius * 0.79), at: SCNVector3(0, p.headY, 0), material: tendon)
+        addCapsule(to: root, radius: g.headRadius * 0.30, height: g.headRadius * 0.70, at: SCNVector3(0, p.neckY, 0), material: muscle)
+
+        let chestY = p.hipY + g.torsoHeight * 0.68
+        for side: Float in [-1, 1] {
+            addEllipsoid(to: root, radii: SCNVector3(g.chestWidth * 0.245, g.torsoHeight * 0.17, g.chestDepth * 0.53), at: SCNVector3(side * g.chestWidth * 0.245, chestY, g.chestDepth * 0.035), material: muscle)
+            addSphere(to: root, radius: g.armRadius * 1.34, at: SCNVector3(side * p.armX, p.shoulderY, 0), material: muscleLight)
+
+            let upperArmY = p.shoulderY - g.armLength * 0.23
+            let forearmY = p.shoulderY - g.armLength * 0.70
+            addCapsule(to: root, radius: g.armRadius * 1.08, height: g.armLength * 0.43, at: SCNVector3(side * p.armX, upperArmY, 0), material: muscle)
+            addCapsule(to: root, radius: g.armRadius * 0.82, height: g.armLength * 0.40, at: SCNVector3(side * p.armX, forearmY, 0), material: muscleLight)
+            addCapsule(to: root, radius: g.armRadius * 0.42, height: g.armLength * 0.12, at: SCNVector3(side * p.armX, p.shoulderY - g.armLength * 0.49, 0), material: tendon)
+        }
+
+        for row in 0..<3 {
+            let y = p.hipY + g.torsoHeight * (0.48 - Float(row) * 0.14)
+            for side: Float in [-1, 1] {
+                addEllipsoid(to: root, radii: SCNVector3(g.waistWidth * 0.105, g.torsoHeight * 0.075, g.waistDepth * 0.54), at: SCNVector3(side * g.waistWidth * 0.12, y, g.waistDepth * 0.04), material: row.isMultiple(of: 2) ? muscleLight : muscle)
+            }
+        }
+
+        addEllipsoid(to: root, radii: SCNVector3(g.hipWidth * 0.48, g.torsoHeight * 0.17, g.hipDepth * 0.52), at: SCNVector3(0, p.hipY + g.torsoHeight * 0.08, -g.hipDepth * 0.04), material: muscle)
+
+        let thighLength = g.legLength * 0.52
+        let calfLength = g.legLength * 0.48
+        let kneeY = p.floorY + calfLength
+        for side: Float in [-1, 1] {
+            addCapsule(to: root, radius: g.thighRadius * 0.96, height: thighLength * 0.92, at: SCNVector3(side * p.legX, kneeY + thighLength * 0.53, 0), material: muscle)
+            addCapsule(to: root, radius: g.calfRadius * 0.96, height: calfLength * 0.78, at: SCNVector3(side * p.legX, p.floorY + calfLength * 0.48, -g.calfRadius * 0.12), material: muscleLight)
+            addCapsule(to: root, radius: g.calfRadius * 0.36, height: g.legLength * 0.10, at: SCNVector3(side * p.legX, p.floorY + g.legLength * 0.05, 0), material: tendon)
+        }
+
+        root.eulerAngles.y = -.pi / 12
+        return root
+    }
+
+    private func makeSkeletonBody(for profile: TwinProfile) -> SCNNode {
+        let g = BodyGeometry(profile: profile)
+        let p = bodyPositions(g)
+        let root = SCNNode()
+        let bone = boneMaterial()
+        let cartilage = cartilageMaterial()
+
+        addEllipsoid(to: root, radii: SCNVector3(g.headRadius * 0.72, g.headRadius * 0.88, g.headRadius * 0.72), at: SCNVector3(0, p.headY, 0), material: bone)
+        addCapsule(to: root, radius: g.totalHeight * 0.012, height: g.torsoHeight * 0.86, at: SCNVector3(0, p.hipY + g.torsoHeight * 0.48, -g.chestDepth * 0.22), material: bone)
+
+        for rib in 0..<6 {
+            let progress = Float(rib) / 5
+            let ribRadius = (g.chestWidth * (0.42 - progress * 0.08))
+            let torus = SCNTorus(ringRadius: CGFloat(ribRadius), pipeRadius: CGFloat(g.totalHeight * 0.006))
+            torus.ringSegmentCount = 48
+            torus.pipeSegmentCount = 10
+            torus.firstMaterial = bone
+            let node = SCNNode(geometry: torus)
+            node.scale.z = 0.46
+            node.position = SCNVector3(0, p.hipY + g.torsoHeight * (0.78 - progress * 0.10), 0)
+            root.addChildNode(node)
+        }
+
+        addCapsule(to: root, radius: g.totalHeight * 0.009, height: g.shoulderWidth * 0.82, at: SCNVector3(0, p.shoulderY, 0), material: bone, rotation: SCNVector4(0, 0, 1, Float.pi / 2))
+        addEllipsoid(to: root, radii: SCNVector3(g.hipWidth * 0.42, g.totalHeight * 0.055, g.hipDepth * 0.38), at: SCNVector3(0, p.hipY, 0), material: bone)
+
+        let elbowY = p.shoulderY - g.armLength * 0.48
+        let wristY = p.shoulderY - g.armLength * 0.94
+        let kneeY = p.floorY + g.legLength * 0.48
+        for side: Float in [-1, 1] {
+            addCapsule(to: root, radius: g.totalHeight * 0.012, height: g.armLength * 0.46, at: SCNVector3(side * p.armX, (p.shoulderY + elbowY) / 2, 0), material: bone)
+            addCapsule(to: root, radius: g.totalHeight * 0.009, height: g.armLength * 0.42, at: SCNVector3(side * p.armX, (elbowY + wristY) / 2, 0), material: bone)
+            addCapsule(to: root, radius: g.totalHeight * 0.018, height: g.legLength * 0.47, at: SCNVector3(side * p.legX, (p.hipY + kneeY) / 2, 0), material: bone)
+            addCapsule(to: root, radius: g.totalHeight * 0.013, height: g.legLength * 0.44, at: SCNVector3(side * p.legX, (kneeY + p.floorY) / 2, 0), material: bone)
+
+            for point in [
+                SCNVector3(side * p.armX, p.shoulderY, 0),
+                SCNVector3(side * p.armX, elbowY, 0),
+                SCNVector3(side * p.armX, wristY, 0),
+                SCNVector3(side * p.legX, p.hipY, 0),
+                SCNVector3(side * p.legX, kneeY, 0),
+                SCNVector3(side * p.legX, p.floorY, 0)
+            ] {
+                addSphere(to: root, radius: g.totalHeight * 0.018, at: point, material: cartilage)
+            }
+        }
+
+        root.eulerAngles.y = -.pi / 12
+        return root
+    }
+
+    private func makeJointBody(for profile: TwinProfile) -> SCNNode {
+        let g = BodyGeometry(profile: profile)
+        let p = bodyPositions(g)
+        let root = makeExteriorBody(for: profile, material: translucentMaterial(), jointMaterial: translucentMaterial())
+        let joint = jointHighlightMaterial()
+        let elbowY = p.shoulderY - g.armLength * 0.48
+        let wristY = p.shoulderY - g.armLength * 0.94
+        let kneeY = p.floorY + g.legLength * 0.48
+
+        addSphere(to: root, radius: g.totalHeight * 0.020, at: SCNVector3(0, p.neckY, 0), material: joint)
+        addSphere(to: root, radius: g.totalHeight * 0.022, at: SCNVector3(0, p.hipY + g.torsoHeight * 0.38, 0), material: joint)
+        for side: Float in [-1, 1] {
+            for point in [
+                SCNVector3(side * p.armX, p.shoulderY, 0),
+                SCNVector3(side * p.armX, elbowY, 0),
+                SCNVector3(side * p.armX, wristY, 0),
+                SCNVector3(side * p.legX, p.hipY, 0),
+                SCNVector3(side * p.legX, kneeY, 0),
+                SCNVector3(side * p.legX, p.floorY, 0)
+            ] {
+                addSphere(to: root, radius: g.totalHeight * 0.026, at: point, material: joint)
+            }
+        }
+        return root
+    }
+
+    private func bodyPositions(_ g: BodyGeometry) -> (
+        floorY: Float,
+        hipY: Float,
+        shoulderY: Float,
+        neckY: Float,
+        headY: Float,
+        armX: Float,
+        armY: Float,
+        legX: Float
+    ) {
+        let floorY = -g.totalHeight / 2
+        let hipY = floorY + g.legLength
+        let shoulderY = hipY + g.torsoHeight * 0.88
+        let neckY = hipY + g.torsoHeight + g.headRadius * 0.28
+        return (
+            floorY,
+            hipY,
+            shoulderY,
+            neckY,
+            neckY + g.headRadius * 1.18,
+            g.shoulderWidth * 0.57,
+            shoulderY - g.armLength * 0.48,
+            g.hipWidth * 0.28
         )
+    }
+
+    private func makeGroundRing(for profile: TwinProfile, layer: TwinBodyLayer) -> SCNNode {
+        let geometry = BodyGeometry(profile: profile)
+        let torus = SCNTorus(ringRadius: CGFloat(geometry.shoulderWidth * 0.92), pipeRadius: 0.004)
         torus.ringSegmentCount = 96
         torus.pipeSegmentCount = 12
 
         let material = SCNMaterial()
-        material.diffuse.contents = UIColor(red: 0.35, green: 0.94, blue: 0.72, alpha: 0.36)
-        material.emission.contents = UIColor(red: 0.18, green: 0.62, blue: 0.49, alpha: 0.32)
+        let color: UIColor = layer == .muscles
+            ? UIColor(red: 0.95, green: 0.30, blue: 0.25, alpha: 0.40)
+            : UIColor(red: 0.35, green: 0.94, blue: 0.72, alpha: 0.36)
+        material.diffuse.contents = color
+        material.emission.contents = color
         torus.firstMaterial = material
 
         let node = SCNNode(geometry: torus)
@@ -153,12 +324,22 @@ struct TwinSceneView: UIViewRepresentable {
         return node
     }
 
-    private func addCapsule(to root: SCNNode, radius: Float, height: Float, at position: SCNVector3, material: SCNMaterial) {
+    private func addCapsule(
+        to root: SCNNode,
+        radius: Float,
+        height: Float,
+        at position: SCNVector3,
+        material: SCNMaterial,
+        rotation: SCNVector4? = nil
+    ) {
         let geometry = SCNCapsule(capRadius: CGFloat(radius), height: CGFloat(height))
         geometry.radialSegmentCount = 32
         geometry.firstMaterial = material
         let node = SCNNode(geometry: geometry)
         node.position = position
+        if let rotation {
+            node.rotation = rotation
+        }
         root.addChildNode(node)
     }
 
@@ -177,17 +358,84 @@ struct TwinSceneView: UIViewRepresentable {
     }
 
     private func bodyMaterial() -> SCNMaterial {
-        let material = SCNMaterial()
-        material.lightingModel = .physicallyBased
-        material.diffuse.contents = UIColor(red: 0.18, green: 0.24, blue: 0.25, alpha: 1)
-        material.metalness.contents = 0.16
-        material.roughness.contents = 0.48
-        return material
+        material(
+            diffuse: UIColor(red: 0.18, green: 0.24, blue: 0.25, alpha: 1),
+            emission: nil,
+            metalness: 0.16,
+            roughness: 0.48
+        )
     }
 
     private func glowMaterial() -> SCNMaterial {
-        let material = bodyMaterial()
-        material.emission.contents = UIColor(red: 0.25, green: 0.72, blue: 0.58, alpha: 0.30)
+        material(
+            diffuse: UIColor(red: 0.18, green: 0.24, blue: 0.25, alpha: 1),
+            emission: UIColor(red: 0.25, green: 0.72, blue: 0.58, alpha: 0.30),
+            metalness: 0.12,
+            roughness: 0.45
+        )
+    }
+
+    private func muscleMaterial(light: Bool = false) -> SCNMaterial {
+        material(
+            diffuse: light
+                ? UIColor(red: 0.90, green: 0.22, blue: 0.20, alpha: 1)
+                : UIColor(red: 0.62, green: 0.08, blue: 0.10, alpha: 1),
+            emission: UIColor(red: 0.22, green: 0.015, blue: 0.02, alpha: 0.22),
+            metalness: 0.02,
+            roughness: 0.62
+        )
+    }
+
+    private func tendonMaterial() -> SCNMaterial {
+        material(diffuse: UIColor(red: 0.76, green: 0.65, blue: 0.49, alpha: 1), emission: nil, metalness: 0, roughness: 0.72)
+    }
+
+    private func boneMaterial() -> SCNMaterial {
+        material(diffuse: UIColor(red: 0.88, green: 0.85, blue: 0.70, alpha: 1), emission: nil, metalness: 0, roughness: 0.68)
+    }
+
+    private func cartilageMaterial() -> SCNMaterial {
+        material(
+            diffuse: UIColor(red: 0.40, green: 0.85, blue: 0.74, alpha: 1),
+            emission: UIColor(red: 0.18, green: 0.52, blue: 0.45, alpha: 0.32),
+            metalness: 0,
+            roughness: 0.48
+        )
+    }
+
+    private func translucentMaterial() -> SCNMaterial {
+        let value = material(
+            diffuse: UIColor(red: 0.18, green: 0.30, blue: 0.31, alpha: 0.24),
+            emission: UIColor(red: 0.12, green: 0.28, blue: 0.27, alpha: 0.12),
+            metalness: 0.05,
+            roughness: 0.42
+        )
+        value.transparency = 0.32
+        value.isDoubleSided = true
+        return value
+    }
+
+    private func jointHighlightMaterial() -> SCNMaterial {
+        material(
+            diffuse: UIColor(red: 0.35, green: 0.94, blue: 0.72, alpha: 1),
+            emission: UIColor(red: 0.25, green: 0.86, blue: 0.64, alpha: 0.72),
+            metalness: 0.08,
+            roughness: 0.28
+        )
+    }
+
+    private func material(
+        diffuse: UIColor,
+        emission: UIColor?,
+        metalness: CGFloat,
+        roughness: CGFloat
+    ) -> SCNMaterial {
+        let material = SCNMaterial()
+        material.lightingModel = .physicallyBased
+        material.diffuse.contents = diffuse
+        material.emission.contents = emission
+        material.metalness.contents = metalness
+        material.roughness.contents = roughness
         return material
     }
 }

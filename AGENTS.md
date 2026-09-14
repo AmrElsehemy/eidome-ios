@@ -10,9 +10,9 @@ Every feature must contribute at least one of these: a measurable metric, a mode
 
 All twin data must remain distinguishable as measured, derived or estimated. Never imply medical accuracy from a parametric body model.
 
-## v0.02 boundary
+## v0.03 boundary
 
-Keep v0.02 focused on optional body measurements, live visible reshaping, editing existing profiles, provenance and backward-compatible local persistence. HealthKit, accounts, video analysis, anatomical layers and cloud infrastructure belong to later versions.
+Keep v0.03 focused on interactive body, muscle, skeleton and joint layers over the personalized twin geometry. Anatomy is a visual reference with estimated proportions, not a scan of the user's internal structures. HealthKit, accounts, video analysis and cloud infrastructure belong to later versions.
 
 ## Technical direction
 

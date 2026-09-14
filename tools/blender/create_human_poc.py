@@ -205,31 +205,6 @@ def apply_installed_assets(
     return applied
 
 
-def apply_relaxed_pose(rig: bpy.types.Object, RigService) -> None:
-    """Move the game-engine rig from its A-pose into a neutral app pose."""
-    pose = {
-        "skeleton_type": "game_engine",
-        "bone_rotations": {
-            # MPFB's game-engine bones use mirrored local Z axes. Positive on
-            # the left and negative on the right lower the arms toward the
-            # torso while retaining a little clearance for rotation.
-            "upperarm_l": [0.0, 0.0, 0.40],
-            "upperarm_r": [0.0, 0.0, -0.40],
-        },
-        "bone_translations": {},
-        "has_ik_bones": False,
-        "original_shoulder_width": 0,
-        "original_spine_length": 0,
-    }
-
-    bpy.context.view_layer.objects.active = rig
-    rig.select_set(True)
-    bpy.ops.object.mode_set(mode="POSE", toggle=False)
-    RigService.set_pose_from_dict(rig, pose, from_rest_pose=True)
-    bpy.ops.object.mode_set(mode="OBJECT", toggle=False)
-    bpy.context.view_layer.update()
-
-
 def evaluated_bounds(obj: bpy.types.Object) -> tuple[Vector, Vector]:
     evaluated = obj.evaluated_get(bpy.context.evaluated_depsgraph_get())
     corners = [evaluated.matrix_world @ Vector(corner) for corner in evaluated.bound_box]
@@ -300,7 +275,6 @@ def main() -> None:
     TargetService = dynamic_import("mpfb.services.targetservice", "TargetService")
     HumanObjectProperties = dynamic_import("mpfb.entities.objectproperties", "HumanObjectProperties")
     AssetService = dynamic_import("mpfb.services.assetservice", "AssetService")
-    RigService = dynamic_import("mpfb.services.rigservice", "RigService")
 
     clear_scene()
     human = HumanService.create_human(
@@ -339,7 +313,6 @@ def main() -> None:
         AssetService,
         HumanService,
     )
-    apply_relaxed_pose(rig, RigService)
     create_studio(human)
 
     bpy.ops.object.select_all(action="DESELECT")
@@ -371,7 +344,7 @@ def main() -> None:
     print(f"  Installed eyes: {applied_assets.get('eyes', 'not found')}")
     print(f"  Installed clothes: {applied_assets.get('clothes', 'not requested')}")
     print(f"  Mobile rig: {rig.name}")
-    print("  Pose: relaxed")
+    print("  Pose: MPFB rest A-pose")
     print(f"  BMI-derived shape input: {bmi:.2f}")
     print(f"  Blender: {output / 'eidome-human-poc.blend'}")
     print(f"  Mobile GLB: {output / 'eidome-human-poc.glb'}")

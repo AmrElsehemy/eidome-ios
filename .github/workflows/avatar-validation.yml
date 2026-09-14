@@ -64,6 +64,7 @@ jobs:
             -- \
             --human-name "Amr" \
             --glb "$OUTPUT_ROOT/eidome-human-poc.glb" \
+            --usdz "$OUTPUT_ROOT/eidome-human-poc.usdz" \
             --preview "$OUTPUT_ROOT/eidome-human-poc.png" \
             --report "$OUTPUT_ROOT/validation.json" \
             2>&1 | tee "$RUNNER_TEMP/eidome-avatar-validation.log"
@@ -79,6 +80,7 @@ jobs:
           path: |
             .eidome-assets/generated/human-poc/eidome-human-poc.blend
             .eidome-assets/generated/human-poc/eidome-human-poc.glb
+            .eidome-assets/generated/human-poc/eidome-human-poc.usdz
             .eidome-assets/generated/human-poc/eidome-human-poc.png
             .eidome-assets/generated/human-poc/validation.json
             ${{ runner.temp }}/eidome-avatar-build.log

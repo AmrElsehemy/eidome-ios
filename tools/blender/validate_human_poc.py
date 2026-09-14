@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import zipfile
 from pathlib import Path
 
 import bpy
@@ -19,6 +20,7 @@ def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--human-name", required=True)
     parser.add_argument("--glb", required=True)
+    parser.add_argument("--usdz", required=True)
     parser.add_argument("--preview", required=True)
     parser.add_argument("--report", required=True)
     return parser.parse_args(arguments)
@@ -103,6 +105,7 @@ def deformation_metrics(obj: bpy.types.Object) -> dict[str, float]:
 def main() -> None:
     args = parse_arguments()
     glb = Path(args.glb).expanduser().resolve()
+    usdz = Path(args.usdz).expanduser().resolve()
     preview = Path(args.preview).expanduser().resolve()
     report_path = Path(args.report).expanduser().resolve()
 
@@ -138,6 +141,17 @@ def main() -> None:
 
     if not glb.is_file() or glb.stat().st_size < 100_000:
         raise RuntimeError("GLB output is missing or unexpectedly small.")
+    if not usdz.is_file() or usdz.stat().st_size < 100_000:
+        raise RuntimeError("USDZ output is missing or unexpectedly small.")
+    if not zipfile.is_zipfile(usdz):
+        raise RuntimeError("USDZ output is not a valid package.")
+    with zipfile.ZipFile(usdz) as package:
+        payloads = [
+            name for name in package.namelist()
+            if Path(name).suffix.casefold() in {".usd", ".usda", ".usdc"}
+        ]
+        if not payloads:
+            raise RuntimeError("USDZ package contains no USD scene payload.")
     if not preview.is_file() or preview.stat().st_size < 10_000:
         raise RuntimeError("Preview output is missing or unexpectedly small.")
 
@@ -157,6 +171,7 @@ def main() -> None:
         "body_height": height,
         "body_width_to_height": width_to_height,
         "glb_bytes": glb.stat().st_size,
+        "usdz_bytes": usdz.stat().st_size,
         "preview_bytes": preview.stat().st_size,
         "preview_size": preview_size,
         **deformation,

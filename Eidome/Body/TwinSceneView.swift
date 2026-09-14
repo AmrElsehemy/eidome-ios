@@ -118,7 +118,7 @@ struct TwinSceneView: UIViewRepresentable {
     private func makeBody(for profile: TwinProfile, layer: TwinBodyLayer) -> SCNNode {
         switch layer {
         case .body:
-            makeExteriorBody(for: profile)
+            makeBundledExteriorBody(for: profile) ?? makeExteriorBody(for: profile)
         case .muscles:
             makeMuscleBody(for: profile)
         case .skeleton:
@@ -126,6 +126,43 @@ struct TwinSceneView: UIViewRepresentable {
         case .joints:
             makeJointBody(for: profile)
         }
+    }
+
+    private func makeBundledExteriorBody(for profile: TwinProfile) -> SCNNode? {
+        guard
+            let url = Bundle.main.url(
+                forResource: "eidome-human",
+                withExtension: "usdz"
+            ),
+            let sourceScene = try? SCNScene(url: url, options: [
+                SCNSceneSource.LoadingOption.checkConsistency: true
+            ])
+        else {
+            return nil
+        }
+
+        let model = SCNNode()
+        for child in sourceScene.rootNode.childNodes where child.camera == nil && child.light == nil {
+            model.addChildNode(child.clone())
+        }
+        guard !model.childNodes.isEmpty else { return nil }
+
+        let (minimum, maximum) = model.boundingBox
+        let sourceHeight = maximum.y - minimum.y
+        guard sourceHeight.isFinite, sourceHeight > 0 else { return nil }
+
+        let geometry = BodyGeometry(profile: profile)
+        let scale = geometry.totalHeight / sourceHeight
+        model.pivot = SCNMatrix4MakeTranslation(
+            (minimum.x + maximum.x) / 2,
+            minimum.y,
+            (minimum.z + maximum.z) / 2
+        )
+        model.scale = SCNVector3(scale, scale, scale)
+        model.position = SCNVector3(0, -geometry.totalHeight / 2, 0)
+        model.eulerAngles.y = -.pi / 12
+        model.name = "EidomeBundledHuman"
+        return model
     }
 
     private func makeExteriorBody(

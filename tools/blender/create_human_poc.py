@@ -326,6 +326,11 @@ def main() -> None:
         export_format="GLB",
         use_selection=True,
     )
+    bpy.ops.wm.usd_export(
+        filepath=str(output / "eidome-human-poc.usdz"),
+        selected_objects_only=True,
+        export_animation=False,
+    )
 
     scene = bpy.context.scene
     render_engine = select_render_engine(scene)
@@ -348,6 +353,7 @@ def main() -> None:
     print(f"  BMI-derived shape input: {bmi:.2f}")
     print(f"  Blender: {output / 'eidome-human-poc.blend'}")
     print(f"  Mobile GLB: {output / 'eidome-human-poc.glb'}")
+    print(f"  Apple USDZ: {output / 'eidome-human-poc.usdz'}")
     print(f"  Preview: {output / 'eidome-human-poc.png'}")
 
 

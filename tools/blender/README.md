@@ -78,8 +78,8 @@ compatible skin is installed, the console summary reports that it fell back to
 the study material.
 
 The generator adds MPFB's mobile-oriented `game_engine` skeleton before the
-eyes and clothing, applies a deterministic relaxed standing pose, and includes
-the armature in the GLB export.
+eyes and clothing and includes the armature in the GLB export. It currently
+keeps MPFB's safe rest A-pose until a validated authored standing pose is added.
 
 The `.blend` file is the editable source, the `.glb` is the mobile interchange
 asset, and the `.png` is a quick visual checkpoint. These outputs are local and

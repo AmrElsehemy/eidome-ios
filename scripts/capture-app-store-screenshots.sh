@@ -14,6 +14,7 @@ capture() {
   local name="$1" family="$2" udid
   udid="$(device_udid "$name")"
   test -n "$udid" || { echo "Simulator not found: $name"; exit 1; }
+  trap 'xcrun simctl status_bar "$udid" clear >/dev/null 2>&1 || true; xcrun simctl shutdown "$udid" >/dev/null 2>&1 || true' EXIT
   xcrun simctl boot "$udid" >/dev/null 2>&1 || true
   xcrun simctl bootstatus "$udid" -b
   xcrun simctl status_bar "$udid" override --time 9:41 --batteryState charged --batteryLevel 100 --wifiBars 3 --cellularBars 4

@@ -7,6 +7,7 @@ struct TwinHomeView: View {
     @State private var isRefiningTwin = false
     @State private var selectedLayer: TwinBodyLayer = .body
     @State private var isEditingMobility = false
+    @State private var isShowingSettings = false
 
     var body: some View {
         ZStack {
@@ -45,6 +46,9 @@ struct TwinHomeView: View {
                 MobilityEditorView(profile: profile)
             }
         }
+        .sheet(isPresented: $isShowingSettings) {
+            AppSettingsView()
+        }
     }
 
     private var ambientGlow: some View {
@@ -66,6 +70,17 @@ struct TwinHomeView: View {
                     .font(.title2.bold())
             }
             Spacer()
+            Button {
+                isShowingSettings = true
+            } label: {
+                Image(systemName: "info.circle")
+                    .font(.title3)
+                    .frame(width: 44, height: 44)
+                    .background(EidomeTheme.panel, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("About, privacy, and support")
+
             Button {
                 isShowingProfiles = true
             } label: {
@@ -151,7 +166,7 @@ struct TwinHomeView: View {
         VStack(spacing: 18) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("TWIN v0.04")
+                    Text("DIGITAL TWIN")
                         .font(.caption.bold())
                         .tracking(1.2)
                         .foregroundStyle(EidomeTheme.secondaryText)

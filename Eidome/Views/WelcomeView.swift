@@ -2,6 +2,7 @@ import SwiftUI
 
 struct WelcomeView: View {
     @State private var isCreatingTwin = false
+    @State private var isShowingSettings = false
 
     var body: some View {
         ZStack {
@@ -40,6 +41,12 @@ struct WelcomeView: View {
                         isCreatingTwin = true
                     }
                     .buttonStyle(EidomePrimaryButtonStyle())
+
+                    Button("Privacy & About") {
+                        isShowingSettings = true
+                    }
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(EidomeTheme.secondaryText)
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 28)
@@ -51,6 +58,9 @@ struct WelcomeView: View {
                 CreateTwinView(defaultRelationship: .me)
             }
             .presentationDetents([.large])
+        }
+        .sheet(isPresented: $isShowingSettings) {
+            AppSettingsView()
         }
     }
 }

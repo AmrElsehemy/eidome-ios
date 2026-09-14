@@ -1,0 +1,172 @@
+"""Generate Eidome's first realistic exterior-human proof of concept.
+
+Requires the MPFB Blender extension. The script is intended to be run through
+build_human_poc.sh, not from Blender's scripting workspace.
+"""
+
+from __future__ import annotations
+
+import argparse
+import importlib
+import math
+import sys
+from pathlib import Path
+
+import bpy
+from mathutils import Vector
+
+
+def parse_arguments() -> argparse.Namespace:
+    arguments = sys.argv[sys.argv.index("--") + 1 :] if "--" in sys.argv else []
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--output", required=True)
+    parser.add_argument("--name", default="Eidome Human")
+    parser.add_argument("--sex", choices=("female", "male"), default="male")
+    parser.add_argument("--age", type=float, default=40.0)
+    parser.add_argument("--height-cm", type=float, default=175.0)
+    parser.add_argument("--weight-kg", type=float, default=75.0)
+    parser.add_argument("--muscle", type=float, default=0.55)
+    return parser.parse_args(arguments)
+
+
+def clamp(value: float, minimum: float = 0.0, maximum: float = 1.0) -> float:
+    return max(minimum, min(maximum, value))
+
+
+def dynamic_import(package_suffix: str, symbol: str):
+    for module_name in tuple(sys.modules):
+        if module_name.endswith(package_suffix):
+            module = importlib.import_module(module_name)
+            return getattr(module, symbol)
+    raise RuntimeError(
+        "MPFB is not enabled. In Blender open Preferences > Get Extensions, "
+        "install MPFB, enable it, close Blender, and run this command again."
+    )
+
+
+def clear_scene() -> None:
+    bpy.ops.object.select_all(action="SELECT")
+    bpy.ops.object.delete(use_global=False)
+
+
+def set_studio_material(human: bpy.types.Object) -> None:
+    material = bpy.data.materials.new("Eidome Skin Preview")
+    material.use_nodes = True
+    principled = material.node_tree.nodes.get("Principled BSDF")
+    principled.inputs["Base Color"].default_value = (0.34, 0.12, 0.07, 1.0)
+    principled.inputs["Roughness"].default_value = 0.47
+    human.data.materials.clear()
+    human.data.materials.append(material)
+
+
+def evaluated_bounds(obj: bpy.types.Object) -> tuple[Vector, Vector]:
+    evaluated = obj.evaluated_get(bpy.context.evaluated_depsgraph_get())
+    corners = [evaluated.matrix_world @ Vector(corner) for corner in evaluated.bound_box]
+    minimum = Vector(tuple(min(point[index] for point in corners) for index in range(3)))
+    maximum = Vector(tuple(max(point[index] for point in corners) for index in range(3)))
+    return minimum, maximum
+
+
+def point_at(obj: bpy.types.Object, target: Vector) -> None:
+    obj.rotation_euler = (target - obj.location).to_track_quat("-Z", "Y").to_euler()
+
+
+def add_area_light(name: str, location: tuple[float, float, float], energy: float, size: float, target: Vector) -> None:
+    data = bpy.data.lights.new(name, type="AREA")
+    data.energy = energy
+    data.shape = "DISK"
+    data.size = size
+    light = bpy.data.objects.new(name, data)
+    bpy.context.collection.objects.link(light)
+    light.location = location
+    point_at(light, target)
+
+
+def create_studio(human: bpy.types.Object) -> None:
+    minimum, maximum = evaluated_bounds(human)
+    center = (minimum + maximum) * 0.5
+    height = maximum.z - minimum.z
+
+    world = bpy.context.scene.world or bpy.data.worlds.new("Eidome World")
+    bpy.context.scene.world = world
+    world.use_nodes = True
+    world.node_tree.nodes["Background"].inputs["Color"].default_value = (0.003, 0.012, 0.016, 1.0)
+    world.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.18
+
+    camera_data = bpy.data.cameras.new("Eidome Camera")
+    camera = bpy.data.objects.new("Eidome Camera", camera_data)
+    bpy.context.collection.objects.link(camera)
+    camera.location = (center.x, minimum.y - height * 1.45, center.z)
+    camera_data.lens = 58
+    point_at(camera, center)
+    bpy.context.scene.camera = camera
+
+    add_area_light("Key", (-height * 0.65, -height * 0.75, maximum.z), 900, height * 0.55, center)
+    add_area_light("Fill", (height * 0.65, -height * 0.25, center.z), 650, height * 0.45, center)
+    add_area_light("Rim", (0, height * 0.5, maximum.z * 0.9), 1100, height * 0.35, center)
+
+
+def main() -> None:
+    args = parse_arguments()
+    output = Path(args.output).expanduser().resolve()
+    output.mkdir(parents=True, exist_ok=True)
+
+    HumanService = dynamic_import("mpfb.services.humanservice", "HumanService")
+    TargetService = dynamic_import("mpfb.services.targetservice", "TargetService")
+    HumanObjectProperties = dynamic_import("mpfb.entities.objectproperties", "HumanObjectProperties")
+
+    clear_scene()
+    human = HumanService.create_human(
+        mask_helpers=True,
+        detailed_helpers=False,
+        extra_vertex_groups=False,
+        feet_on_ground=True,
+        scale=0.1,
+    )
+    human.name = args.name
+
+    height_m = args.height_cm / 100.0
+    bmi = args.weight_kg / (height_m * height_m)
+    macro_values = {
+        "gender": 1.0 if args.sex == "male" else 0.0,
+        "age": clamp((args.age - 10.0) / 70.0),
+        "height": clamp((args.height_cm - 150.0) / 50.0),
+        "weight": clamp((bmi - 16.0) / 14.0),
+        "muscle": clamp(args.muscle),
+    }
+    for property_name, value in macro_values.items():
+        HumanObjectProperties.set_value(property_name, value, entity_reference=human)
+    TargetService.reapply_macro_details(human)
+    bpy.context.view_layer.update()
+
+    set_studio_material(human)
+    create_studio(human)
+
+    human.select_set(True)
+    bpy.context.view_layer.objects.active = human
+    bpy.ops.wm.save_as_mainfile(filepath=str(output / "eidome-human-poc.blend"))
+    bpy.ops.export_scene.gltf(
+        filepath=str(output / "eidome-human-poc.glb"),
+        export_format="GLB",
+        use_selection=True,
+    )
+
+    scene = bpy.context.scene
+    scene.render.engine = "BLENDER_EEVEE_NEXT"
+    scene.render.resolution_x = 900
+    scene.render.resolution_y = 1400
+    scene.render.resolution_percentage = 100
+    scene.render.image_settings.file_format = "PNG"
+    scene.render.filepath = str(output / "eidome-human-poc.png")
+    scene.render.film_transparent = False
+    bpy.ops.render.render(write_still=True)
+
+    print("Generated Eidome human:")
+    print(f"  BMI-derived shape input: {bmi:.2f}")
+    print(f"  Blender: {output / 'eidome-human-poc.blend'}")
+    print(f"  Mobile GLB: {output / 'eidome-human-poc.glb'}")
+    print(f"  Preview: {output / 'eidome-human-poc.png'}")
+
+
+if __name__ == "__main__":
+    main()

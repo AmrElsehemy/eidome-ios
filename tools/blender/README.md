@@ -40,7 +40,9 @@ Install the free MPFB extension once:
 5. In Blender's MPFB panel, open **Apply Assets > Library Settings**, choose
    **Load pack from zip file**, and select the downloaded pack without
    extracting it.
-6. Restart Blender so the extension and asset index are fully loaded.
+6. Download the **Skins 02** pack from the [official natural male skins page](https://static.makehumancommunity.org/assets/assetpacks/skins02.html).
+7. Load that zip through the same **Library Settings > Load pack from zip file** action.
+8. Restart Blender so the extension and asset index are fully loaded.
 
 Then pull this branch and run:
 
@@ -49,8 +51,9 @@ bash tools/blender/build_human_poc.sh \
   --name "Amr" \
   --sex male \
   --age 40 \
-  --height-cm 175 \
-  --weight-kg 75
+  --height-cm 180 \
+  --weight-kg 85 \
+  --skin-query "male_bronze"
 ```
 
 This creates:
@@ -61,9 +64,14 @@ This creates:
 .eidome-assets/generated/human-poc/eidome-human-poc.png
 ```
 
-The generator automatically uses a suitable installed skin and the system
-high-poly eyes. If the asset pack is missing, its console summary explicitly
-reports that it fell back to the study material and could not find eyes.
+The generator uses a sex-compatible installed skin and the system high-poly
+eyes. Pass `--skin-query` to select a skin reproducibly by any
+case-insensitive substring in its path. If a requested skin is unavailable, the
+build fails and lists compatible installed choices instead of silently using
+the wrong asset. Without `--skin-query`, selection is profile-aware and avoids
+skins labelled with tattoos, makeup, eyeliner, goth, emo, or genitals. If no
+compatible skin is installed, the console summary reports that it fell back to
+the study material.
 
 The `.blend` file is the editable source, the `.glb` is the mobile interchange
 asset, and the `.png` is a quick visual checkpoint. These outputs are local and

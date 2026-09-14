@@ -42,7 +42,9 @@ Install the free MPFB extension once:
    extracting it.
 6. Download the **Skins 02** pack from the [official natural male skins page](https://static.makehumancommunity.org/assets/assetpacks/skins02.html).
 7. Load that zip through the same **Library Settings > Load pack from zip file** action.
-8. Restart Blender so the extension and asset index are fully loaded.
+8. Download the **Pants 03** pack from the [official short-legged pants page](https://static.makehumancommunity.org/assets/assetpacks/pants03.html).
+9. Load that zip through **Library Settings > Load pack from zip file**.
+10. Restart Blender so the extension and asset index are fully loaded.
 
 Then pull this branch and run:
 
@@ -53,7 +55,9 @@ bash tools/blender/build_human_poc.sh \
   --age 40 \
   --height-cm 180 \
   --weight-kg 85 \
-  --skin-query "male_bronze"
+  --muscle 0.65 \
+  --skin-query "male_bronze" \
+  --clothes-query "male_swim_shorts1"
 ```
 
 This creates:
@@ -72,6 +76,10 @@ the wrong asset. Without `--skin-query`, selection is profile-aware and avoids
 skins labelled with tattoos, makeup, eyeliner, goth, emo, or genitals. If no
 compatible skin is installed, the console summary reports that it fell back to
 the study material.
+
+The generator adds MPFB's mobile-oriented `game_engine` skeleton before the
+eyes and clothing, applies a deterministic relaxed standing pose, and includes
+the armature in the GLB export.
 
 The `.blend` file is the editable source, the `.glb` is the mobile interchange
 asset, and the `.png` is a quick visual checkpoint. These outputs are local and

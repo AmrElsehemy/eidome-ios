@@ -64,9 +64,19 @@ def set_studio_material(human: bpy.types.Object) -> None:
 def preferred_skin(paths: list[str], sex: str) -> str | None:
     if not paths:
         return None
-    preferred_terms = ("young", sex, "caucasian")
+
+    opposite_sex = "female" if sex == "male" else "male"
+    compatible = [
+        path
+        for path in paths
+        if sex in path.lower() or opposite_sex not in path.lower()
+    ]
+    if not compatible:
+        return None
+
+    preferred_terms = ("young", sex)
     ranked = sorted(
-        paths,
+        compatible,
         key=lambda path: (
             -sum(term in path.lower() for term in preferred_terms),
             path.casefold(),

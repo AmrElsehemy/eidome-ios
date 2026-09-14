@@ -36,6 +36,11 @@ def parse_arguments() -> argparse.Namespace:
         default=None,
         help="Case-insensitive substring used to choose installed MPFB clothing.",
     )
+    parser.add_argument(
+        "--pose-query",
+        default=None,
+        help="Case-insensitive substring used to choose an installed MPFB BVH pose.",
+    )
     return parser.parse_args(arguments)
 
 
@@ -144,6 +149,21 @@ def preferred_clothes(
         raise RuntimeError(
             f"No installed {sex} or neutral clothing matches {clothes_query!r}. "
             f"Available compatible clothes: {available or 'none'}"
+        )
+    return sorted(matches, key=str.casefold)[0]
+
+
+def preferred_pose(paths: list[str], pose_query: str | None) -> str | None:
+    if not pose_query:
+        return None
+
+    query = pose_query.casefold()
+    matches = [path for path in paths if query in path.casefold()]
+    if not matches:
+        available = ", ".join(sorted(Path(path).stem for path in paths))
+        raise RuntimeError(
+            f"No installed pose matches {pose_query!r}. "
+            f"Available poses: {available or 'none'}"
         )
     return sorted(matches, key=str.casefold)[0]
 
@@ -275,6 +295,10 @@ def main() -> None:
     TargetService = dynamic_import("mpfb.services.targetservice", "TargetService")
     HumanObjectProperties = dynamic_import("mpfb.entities.objectproperties", "HumanObjectProperties")
     AssetService = dynamic_import("mpfb.services.assetservice", "AssetService")
+    AnimationService = dynamic_import(
+        "mpfb.services.animationservice",
+        "AnimationService",
+    )
 
     clear_scene()
     human = HumanService.create_human(
@@ -300,9 +324,14 @@ def main() -> None:
     TargetService.reapply_macro_details(human)
     bpy.context.view_layer.update()
 
-    # Add the mobile-oriented skeleton before body parts and clothes. MPFB then
-    # binds each subsequently attached mesh to the same armature.
-    rig = HumanService.add_builtin_rig(human, "game_engine", import_weights=True)
+    pose_path = preferred_pose(
+        [str(path) for path in AssetService.list_bvh_assets("poses")],
+        args.pose_query,
+    )
+    # MPFB's authored BVH poses require the default rig. Unposed mobile exports
+    # retain the lighter game-engine rig.
+    rig_type = "default" if pose_path else "game_engine"
+    rig = HumanService.add_builtin_rig(human, rig_type, import_weights=True)
 
     applied_assets = apply_installed_assets(
         human,
@@ -313,6 +342,9 @@ def main() -> None:
         AssetService,
         HumanService,
     )
+    if pose_path:
+        AnimationService.import_bvh_file_as_pose(rig, pose_path)
+        bpy.context.view_layer.update()
     create_studio(human)
 
     bpy.ops.object.select_all(action="DESELECT")
@@ -343,8 +375,8 @@ def main() -> None:
     print(f"  Installed skin: {applied_assets.get('skin', 'not found; using study material')}")
     print(f"  Installed eyes: {applied_assets.get('eyes', 'not found')}")
     print(f"  Installed clothes: {applied_assets.get('clothes', 'not requested')}")
-    print(f"  Mobile rig: {rig.name}")
-    print("  Pose: MPFB rest A-pose")
+    print(f"  Rig: {rig.name} ({rig_type})")
+    print(f"  Pose: {pose_path or 'MPFB rest A-pose'}")
     print(f"  BMI-derived shape input: {bmi:.2f}")
     print(f"  Blender: {output / 'eidome-human-poc.blend'}")
     print(f"  Mobile GLB: {output / 'eidome-human-poc.glb'}")

@@ -36,7 +36,7 @@ Install the free MPFB extension once:
 1. Open Blender.
 2. Choose **Edit > Preferences > Get Extensions**.
 3. Search for **MPFB**, install it, and make sure it is enabled.
-4. Download the **makehuman system assets** pack from the official MPFB asset packs page.
+4. Download the **makehuman system assets** pack from the [official asset page](https://static.makehumancommunity.org/assets/assetpacks/makehuman_system_assets.html).
 5. In Blender's MPFB panel, open **Apply Assets > Library Settings**, choose
    **Load pack from zip file**, and select the downloaded pack without
    extracting it.

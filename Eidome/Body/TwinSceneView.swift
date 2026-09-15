@@ -653,8 +653,8 @@ private struct AvatarDeformation {
 
     func clothingShader(minimumY: Float, maximumY: Float) -> String {
         let height = max(maximumY - minimumY, 0.001)
-        let lowerX = (thigh + hipX) / 2
-        let lowerZ = (thigh + hipZ) / 2
+        let clothingX = max(thigh, hipX, waistX) * 1.03
+        let clothingZ = max(thigh, hipZ, waistZ) * 1.03
 
         return """
         #pragma body
@@ -663,16 +663,16 @@ private struct AvatarDeformation {
             0.0,
             1.0
         );
-        float eidomeUpper = smoothstep(0.18, 0.88, eidomeY);
+        float eidomeHemEase = smoothstep(0.0, 0.18, eidomeY);
         float eidomeXScale = mix(
-            \(Self.format(lowerX)),
-            \(Self.format(waistX)),
-            eidomeUpper
+            \(Self.format(clothingX * 1.02)),
+            \(Self.format(clothingX)),
+            eidomeHemEase
         );
         float eidomeZScale = mix(
-            \(Self.format(lowerZ)),
-            \(Self.format(waistZ)),
-            eidomeUpper
+            \(Self.format(clothingZ * 1.02)),
+            \(Self.format(clothingZ)),
+            eidomeHemEase
         );
 
         _geometry.position.x *= eidomeXScale;

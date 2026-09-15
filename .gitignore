@@ -7,3 +7,8 @@ xcuserdata/
 AuthKey_*.p8
 fastlane/api_key.json
 .env
+
+# Local 3D source assets and generated Blender reports
+.eidome-assets/
+*.blend1
+

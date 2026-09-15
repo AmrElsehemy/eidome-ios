@@ -104,16 +104,16 @@ struct TwinHomeView: View {
 
     private func twinStage(_ profile: TwinProfile) -> some View {
         VStack(spacing: 12) {
-            ZStack(alignment: .bottom) {
-                TwinSceneView(profile: profile, layer: selectedLayer)
-                    .frame(height: 420)
-                    .id(profile.id)
+            TwinSceneView(profile: profile, layer: selectedLayer)
+                .frame(height: 420)
+                .id(profile.id)
 
-                Text("Drag to rotate · Pinch to zoom")
-                    .font(.caption)
-                    .foregroundStyle(EidomeTheme.secondaryText)
-                    .padding(.bottom, 4)
-            }
+            Text("Drag to rotate · Pinch to zoom")
+                .font(.caption)
+                .foregroundStyle(EidomeTheme.secondaryText)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(EidomeTheme.panel.opacity(0.84), in: Capsule())
 
             layerPicker
 

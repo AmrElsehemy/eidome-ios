@@ -1,6 +1,12 @@
 name: Avatar Validation
 
 on:
+  push:
+    branches:
+      - feature/v0.05-human-avatar
+    paths:
+      - .github/workflows/avatar-validation.yml
+      - tools/blender/**
   workflow_dispatch:
     inputs:
       ref:
@@ -39,7 +45,7 @@ jobs:
       - name: Check out selected avatar revision
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
 
       - name: Capture validated revision
@@ -81,6 +87,15 @@ jobs:
             2>&1 | tee "$RUNNER_TEMP/eidome-avatar-validation.log"
           test -s "$OUTPUT_ROOT/validation.json"
 
+      - name: Reopen USDZ with Apple SceneKit
+        run: |
+          set -o pipefail
+          xcrun swift tools/blender/validate_usdz_scene.swift \
+            "$OUTPUT_ROOT/eidome-human-poc.usdz" \
+            "$OUTPUT_ROOT/usdz-scene-validation.json" \
+            2>&1 | tee "$RUNNER_TEMP/eidome-usdz-scene-validation.log"
+          test -s "$OUTPUT_ROOT/usdz-scene-validation.json"
+
       - name: Upload validation evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -94,13 +109,22 @@ jobs:
             .eidome-assets/generated/human-poc/eidome-human-poc.usdz
             .eidome-assets/generated/human-poc/eidome-human-poc.png
             .eidome-assets/generated/human-poc/validation.json
+            .eidome-assets/generated/human-poc/usdz-scene-validation.json
             ${{ runner.temp }}/eidome-avatar-build.log
             ${{ runner.temp }}/eidome-avatar-validation.log
+            ${{ runner.temp }}/eidome-usdz-scene-validation.log
 
   promote:
     name: Promote validated USDZ
     needs: validate
-    if: ${{ inputs.promote && inputs.ref == 'feature/v0.05-human-avatar' }}
+    if: >-
+      ${{
+        (github.event_name == 'workflow_dispatch' &&
+          inputs.promote &&
+          inputs.ref == 'feature/v0.05-human-avatar') ||
+        (github.event_name == 'push' &&
+          github.ref_name == 'feature/v0.05-human-avatar')
+      }}
     runs-on: ubuntu-latest
     permissions:
       contents: write

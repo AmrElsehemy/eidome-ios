@@ -90,25 +90,34 @@ struct TwinSceneView: UIViewRepresentable {
 
         let keyLight = SCNNode()
         keyLight.light = SCNLight()
-        keyLight.light?.type = .omni
-        keyLight.light?.intensity = 1050
-        keyLight.light?.color = UIColor(red: 0.36, green: 0.52, blue: 1, alpha: 1)
-        keyLight.position = SCNVector3(-2.2, 2.2, 2.4)
+        keyLight.light?.type = .directional
+        keyLight.light?.intensity = layer == .skeleton ? 920 : 760
+        keyLight.light?.color = UIColor(red: 1.0, green: 0.94, blue: 0.88, alpha: 1)
+        keyLight.position = SCNVector3(-2.2, 2.4, 2.8)
+        keyLight.look(at: SCNVector3(0, 0.08, 0))
         scene.rootNode.addChildNode(keyLight)
+
+        let fillLight = SCNNode()
+        fillLight.light = SCNLight()
+        fillLight.light?.type = .omni
+        fillLight.light?.intensity = 140
+        fillLight.light?.color = UIColor(red: 0.82, green: 0.88, blue: 1.0, alpha: 1)
+        fillLight.position = SCNVector3(1.8, 0.9, 2.3)
+        scene.rootNode.addChildNode(fillLight)
 
         let rimLight = SCNNode()
         rimLight.light = SCNLight()
         rimLight.light?.type = .omni
-        rimLight.light?.intensity = 900
-        rimLight.light?.color = UIColor(red: 0.35, green: 0.94, blue: 0.72, alpha: 1)
-        rimLight.position = SCNVector3(2.0, 0.7, -1.5)
+        rimLight.light?.intensity = 110
+        rimLight.light?.color = UIColor(red: 0.70, green: 1.0, blue: 0.88, alpha: 1)
+        rimLight.position = SCNVector3(1.8, 1.1, -1.8)
         scene.rootNode.addChildNode(rimLight)
 
         let ambient = SCNNode()
         ambient.light = SCNLight()
         ambient.light?.type = .ambient
-        ambient.light?.intensity = layer == .skeleton ? 420 : 260
-        ambient.light?.color = UIColor(white: 0.48, alpha: 1)
+        ambient.light?.intensity = layer == .skeleton ? 150 : 70
+        ambient.light?.color = UIColor(white: 0.62, alpha: 1)
         scene.rootNode.addChildNode(ambient)
 
         view.scene = scene
@@ -118,7 +127,7 @@ struct TwinSceneView: UIViewRepresentable {
     private func makeBody(for profile: TwinProfile, layer: TwinBodyLayer) -> SCNNode {
         switch layer {
         case .body:
-            makeExteriorBody(for: profile)
+            makeBundledExteriorBody(for: profile) ?? makeExteriorBody(for: profile)
         case .muscles:
             makeMuscleBody(for: profile)
         case .skeleton:
@@ -126,6 +135,43 @@ struct TwinSceneView: UIViewRepresentable {
         case .joints:
             makeJointBody(for: profile)
         }
+    }
+
+    private func makeBundledExteriorBody(for profile: TwinProfile) -> SCNNode? {
+        guard
+            let url = Bundle.main.url(
+                forResource: "eidome-human",
+                withExtension: "usdz"
+            ),
+            let sourceScene = try? SCNScene(url: url, options: [
+                SCNSceneSource.LoadingOption.checkConsistency: true
+            ])
+        else {
+            return nil
+        }
+
+        let model = SCNNode()
+        for child in sourceScene.rootNode.childNodes where child.camera == nil && child.light == nil {
+            model.addChildNode(child.clone())
+        }
+        guard !model.childNodes.isEmpty else { return nil }
+
+        let (minimum, maximum) = model.boundingBox
+        let sourceHeight = maximum.y - minimum.y
+        guard sourceHeight.isFinite, sourceHeight > 0 else { return nil }
+
+        let geometry = BodyGeometry(profile: profile)
+        let scale = geometry.totalHeight / sourceHeight
+        model.pivot = SCNMatrix4MakeTranslation(
+            (minimum.x + maximum.x) / 2,
+            minimum.y,
+            (minimum.z + maximum.z) / 2
+        )
+        model.scale = SCNVector3(scale, scale, scale)
+        model.position = SCNVector3(0, -geometry.totalHeight / 2, 0)
+        model.eulerAngles.y = -.pi / 12
+        model.name = "EidomeBundledHuman"
+        return model
     }
 
     private func makeExteriorBody(

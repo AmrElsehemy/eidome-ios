@@ -205,6 +205,92 @@ def apply_installed_assets(
     return applied
 
 
+
+def make_usdz_material(
+    name: str,
+    color: tuple[float, float, float, float],
+    roughness: float,
+) -> bpy.types.Material:
+    """Create a deliberately simple Apple-compatible PBR material."""
+    material = bpy.data.materials.new(name)
+    material.diffuse_color = color
+    if material.node_tree is None:
+        material.use_nodes = True
+    node_tree = material.node_tree
+    node_tree.nodes.clear()
+    output = node_tree.nodes.new("ShaderNodeOutputMaterial")
+    principled = node_tree.nodes.new("ShaderNodeBsdfPrincipled")
+    principled.inputs["Base Color"].default_value = color
+    principled.inputs["Roughness"].default_value = roughness
+    principled.inputs["Metallic"].default_value = 0.0
+    node_tree.links.new(principled.outputs["BSDF"], output.inputs["Surface"])
+    return material
+
+
+def export_static_usdz(
+    output_path: Path,
+    human: bpy.types.Object,
+) -> None:
+    """Bake evaluated meshes before USDZ export.
+
+    SceneKit interpreted MPFB's armature/skinning transforms differently from
+    Blender, producing severe stretching even though the Blender scene was
+    healthy. v0.05 does not animate the exterior avatar, so export only the
+    evaluated static geometry and simple PBR materials. The rig remains in the
+    .blend and GLB for future animation work.
+    """
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    sources = [obj for obj in bpy.context.scene.objects if obj.type == "MESH"]
+    if len(sources) < 3:
+        raise RuntimeError("Static USDZ export requires body, eyes, and clothing meshes.")
+
+    skin = make_usdz_material("Eidome_USDZ_Skin", (0.43, 0.20, 0.11, 1.0), 0.58)
+    eyes = make_usdz_material("Eidome_USDZ_Eyes", (0.72, 0.76, 0.78, 1.0), 0.34)
+    clothes = make_usdz_material("Eidome_USDZ_Shorts", (0.018, 0.045, 0.075, 1.0), 0.72)
+
+    baked: list[tuple[bpy.types.Object, bpy.types.Mesh]] = []
+    try:
+        for source in sources:
+            evaluated = source.evaluated_get(depsgraph)
+            mesh = bpy.data.meshes.new_from_object(
+                evaluated,
+                preserve_all_data_layers=True,
+                depsgraph=depsgraph,
+            )
+            mesh.name = f"{source.name}_USDZ_Mesh"
+            mesh.materials.clear()
+
+            source_name = source.name.casefold()
+            if source == human:
+                material = skin
+            elif "eye" in source_name or "high-poly" in source_name:
+                material = eyes
+            else:
+                material = clothes
+            mesh.materials.append(material)
+            for polygon in mesh.polygons:
+                polygon.material_index = 0
+
+            baked_object = bpy.data.objects.new(f"{source.name}_USDZ", mesh)
+            bpy.context.collection.objects.link(baked_object)
+            baked_object.matrix_world = source.matrix_world.copy()
+            baked.append((baked_object, mesh))
+
+        bpy.ops.object.select_all(action="DESELECT")
+        for baked_object, _ in baked:
+            baked_object.select_set(True)
+        bpy.context.view_layer.objects.active = baked[0][0]
+        bpy.ops.wm.usd_export(
+            filepath=str(output_path),
+            selected_objects_only=True,
+            export_animation=False,
+        )
+    finally:
+        for baked_object, mesh in baked:
+            bpy.data.objects.remove(baked_object, do_unlink=True)
+            if mesh.users == 0:
+                bpy.data.meshes.remove(mesh)
+
 def evaluated_bounds(obj: bpy.types.Object) -> tuple[Vector, Vector]:
     evaluated = obj.evaluated_get(bpy.context.evaluated_depsgraph_get())
     corners = [evaluated.matrix_world @ Vector(corner) for corner in evaluated.bound_box]
@@ -326,11 +412,7 @@ def main() -> None:
         export_format="GLB",
         use_selection=True,
     )
-    bpy.ops.wm.usd_export(
-        filepath=str(output / "eidome-human-poc.usdz"),
-        selected_objects_only=True,
-        export_animation=False,
-    )
+    export_static_usdz(output / "eidome-human-poc.usdz", human)
 
     scene = bpy.context.scene
     render_engine = select_render_engine(scene)

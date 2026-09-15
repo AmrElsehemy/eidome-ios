@@ -179,6 +179,7 @@ struct TwinSceneView: UIViewRepresentable {
 
     private func applyPersonalization(to model: SCNNode, for profile: TwinProfile) {
         let deformation = AvatarDeformation(profile: profile)
+        guard !deformation.isIdentity else { return }
 
         model.enumerateChildNodes { node, _ in
             guard let geometry = node.geometry else { return }
@@ -192,14 +193,11 @@ struct TwinSceneView: UIViewRepresentable {
 
             let (minimum, maximum) = node.boundingBox
             let isBody = label.contains("base") || label.contains("body")
-            if let personalized = deformation.geometry(
-                byDeforming: geometry,
-                minimumY: minimum.y,
-                maximumY: maximum.y,
-                isBody: isBody
-            ) {
-                node.geometry = personalized
-            }
+            geometry.shaderModifiers = [
+                .geometry: isBody
+                    ? deformation.bodyShader(minimumY: minimum.y, maximumY: maximum.y)
+                    : deformation.clothingShader(minimumY: minimum.y, maximumY: maximum.y)
+            ]
         }
     }
 
@@ -594,118 +592,95 @@ private struct AvatarDeformation {
         )
     }
 
-    func geometry(
-        byDeforming geometry: SCNGeometry,
-        minimumY: Float,
-        maximumY: Float,
-        isBody: Bool
-    ) -> SCNGeometry? {
-        var sources = geometry.sources
-        guard
-            let vertexIndex = sources.firstIndex(where: { $0.semantic == .vertex }),
-            sources[vertexIndex].usesFloatComponents,
-            sources[vertexIndex].componentsPerVector >= 3,
-            sources[vertexIndex].bytesPerComponent == MemoryLayout<Float>.size,
-            sources[vertexIndex].dataOffset.isMultiple(of: MemoryLayout<Float>.alignment),
-            sources[vertexIndex].dataStride.isMultiple(of: MemoryLayout<Float>.alignment)
-        else {
-            return nil
-        }
+    var isIdentity: Bool {
+        [
+            shoulderX, chestX, chestZ, waistX, waistZ,
+            hipX, hipZ, thigh, calf
+        ].allSatisfy { abs($0 - 1) < 0.001 }
+    }
 
-        let source = sources[vertexIndex]
-        var data = source.data
+    func bodyShader(minimumY: Float, maximumY: Float) -> String {
         let height = max(maximumY - minimumY, 0.001)
 
-        data.withUnsafeMutableBytes { buffer in
-            guard let baseAddress = buffer.baseAddress else { return }
+        return """
+        #pragma body
+        float eidomeY = clamp(
+            (_geometry.position.y - \(Self.format(minimumY))) / \(Self.format(height)),
+            0.0,
+            1.0
+        );
+        float eidomeCentral = 1.0 - smoothstep(
+            \(Self.format(height * 0.15)),
+            \(Self.format(height * 0.31)),
+            abs(_geometry.position.x)
+        );
 
-            for index in 0..<source.vectorCount {
-                let offset = source.dataOffset + index * source.dataStride
-                guard offset + (2 * MemoryLayout<Float>.size) < buffer.count else { continue }
+        float eidomeCalf = smoothstep(0.04, 0.15, eidomeY)
+            * (1.0 - smoothstep(0.27, 0.35, eidomeY));
+        float eidomeThigh = smoothstep(0.24, 0.34, eidomeY)
+            * (1.0 - smoothstep(0.47, 0.53, eidomeY));
+        float eidomeHip = smoothstep(0.43, 0.49, eidomeY)
+            * (1.0 - smoothstep(0.56, 0.62, eidomeY));
+        float eidomeWaist = smoothstep(0.51, 0.58, eidomeY)
+            * (1.0 - smoothstep(0.65, 0.71, eidomeY));
+        float eidomeChest = smoothstep(0.60, 0.68, eidomeY)
+            * (1.0 - smoothstep(0.76, 0.82, eidomeY));
+        float eidomeShoulder = smoothstep(0.70, 0.76, eidomeY)
+            * (1.0 - smoothstep(0.83, 0.88, eidomeY));
 
-                let xPointer = baseAddress
-                    .advanced(by: offset)
-                    .assumingMemoryBound(to: Float.self)
-                let yPointer = baseAddress
-                    .advanced(by: offset + MemoryLayout<Float>.size)
-                    .assumingMemoryBound(to: Float.self)
-                let zPointer = baseAddress
-                    .advanced(by: offset + 2 * MemoryLayout<Float>.size)
-                    .assumingMemoryBound(to: Float.self)
+        float eidomeXScale = 1.0;
+        eidomeXScale = mix(eidomeXScale, \(Self.format(calf)), eidomeCalf * eidomeCentral);
+        eidomeXScale = mix(eidomeXScale, \(Self.format(thigh)), eidomeThigh * eidomeCentral);
+        eidomeXScale = mix(eidomeXScale, \(Self.format(hipX)), eidomeHip * eidomeCentral);
+        eidomeXScale = mix(eidomeXScale, \(Self.format(waistX)), eidomeWaist * eidomeCentral);
+        eidomeXScale = mix(eidomeXScale, \(Self.format(chestX)), eidomeChest * eidomeCentral);
+        eidomeXScale = mix(eidomeXScale, \(Self.format(shoulderX)), eidomeShoulder);
 
-                let scale = isBody
-                    ? bodyScale(x: xPointer.pointee, y: yPointer.pointee, minimumY: minimumY, height: height)
-                    : clothingScale(y: yPointer.pointee, minimumY: minimumY, height: height)
+        float eidomeZScale = 1.0;
+        eidomeZScale = mix(eidomeZScale, \(Self.format(calf)), eidomeCalf);
+        eidomeZScale = mix(eidomeZScale, \(Self.format(thigh)), eidomeThigh);
+        eidomeZScale = mix(eidomeZScale, \(Self.format(hipZ)), eidomeHip);
+        eidomeZScale = mix(eidomeZScale, \(Self.format(waistZ)), eidomeWaist);
+        eidomeZScale = mix(eidomeZScale, \(Self.format(chestZ)), eidomeChest);
 
-                xPointer.pointee *= scale.x
-                zPointer.pointee *= scale.y
-            }
-        }
-
-        sources[vertexIndex] = SCNGeometrySource(
-            data: data,
-            semantic: .vertex,
-            vectorCount: source.vectorCount,
-            usesFloatComponents: source.usesFloatComponents,
-            componentsPerVector: source.componentsPerVector,
-            bytesPerComponent: source.bytesPerComponent,
-            dataOffset: source.dataOffset,
-            dataStride: source.dataStride
-        )
-
-        let personalized = SCNGeometry(sources: sources, elements: geometry.elements)
-        personalized.name = geometry.name
-        personalized.materials = geometry.materials
-        return personalized
+        _geometry.position.x *= eidomeXScale;
+        _geometry.position.z *= eidomeZScale;
+        _geometry.normal.x /= max(eidomeXScale, 0.01);
+        _geometry.normal.z /= max(eidomeZScale, 0.01);
+        _geometry.normal = normalize(_geometry.normal);
+        """
     }
 
-    private func bodyScale(
-        x: Float,
-        y: Float,
-        minimumY: Float,
-        height: Float
-    ) -> SIMD2<Float> {
-        let normalizedY = min(max((y - minimumY) / height, 0), 1)
-        let centrality = 1 - Self.smoothstep(
-            height * 0.15,
-            height * 0.31,
-            abs(x)
-        )
-
-        let calfWeight = Self.band(normalizedY, 0.04, 0.15, 0.27, 0.35)
-        let thighWeight = Self.band(normalizedY, 0.24, 0.34, 0.47, 0.53)
-        let hipWeight = Self.band(normalizedY, 0.43, 0.49, 0.56, 0.62)
-        let waistWeight = Self.band(normalizedY, 0.51, 0.58, 0.65, 0.71)
-        let chestWeight = Self.band(normalizedY, 0.60, 0.68, 0.76, 0.82)
-        let shoulderWeight = Self.band(normalizedY, 0.70, 0.76, 0.83, 0.88)
-
-        var xScale: Float = 1
-        xScale = Self.mix(xScale, calf, calfWeight * centrality)
-        xScale = Self.mix(xScale, thigh, thighWeight * centrality)
-        xScale = Self.mix(xScale, hipX, hipWeight * centrality)
-        xScale = Self.mix(xScale, waistX, waistWeight * centrality)
-        xScale = Self.mix(xScale, chestX, chestWeight * centrality)
-        xScale = Self.mix(xScale, shoulderX, shoulderWeight)
-
-        var zScale: Float = 1
-        zScale = Self.mix(zScale, calf, calfWeight)
-        zScale = Self.mix(zScale, thigh, thighWeight)
-        zScale = Self.mix(zScale, hipZ, hipWeight)
-        zScale = Self.mix(zScale, waistZ, waistWeight)
-        zScale = Self.mix(zScale, chestZ, chestWeight)
-
-        return SIMD2(xScale, zScale)
-    }
-
-    private func clothingScale(y: Float, minimumY: Float, height: Float) -> SIMD2<Float> {
-        let normalizedY = min(max((y - minimumY) / height, 0), 1)
-        let upperWeight = Self.smoothstep(0.18, 0.88, normalizedY)
+    func clothingShader(minimumY: Float, maximumY: Float) -> String {
+        let height = max(maximumY - minimumY, 0.001)
         let lowerX = (thigh + hipX) / 2
         let lowerZ = (thigh + hipZ) / 2
-        return SIMD2(
-            Self.mix(lowerX, waistX, upperWeight),
-            Self.mix(lowerZ, waistZ, upperWeight)
-        )
+
+        return """
+        #pragma body
+        float eidomeY = clamp(
+            (_geometry.position.y - \(Self.format(minimumY))) / \(Self.format(height)),
+            0.0,
+            1.0
+        );
+        float eidomeUpper = smoothstep(0.18, 0.88, eidomeY);
+        float eidomeXScale = mix(
+            \(Self.format(lowerX)),
+            \(Self.format(waistX)),
+            eidomeUpper
+        );
+        float eidomeZScale = mix(
+            \(Self.format(lowerZ)),
+            \(Self.format(waistZ)),
+            eidomeUpper
+        );
+
+        _geometry.position.x *= eidomeXScale;
+        _geometry.position.z *= eidomeZScale;
+        _geometry.normal.x /= max(eidomeXScale, 0.01);
+        _geometry.normal.z /= max(eidomeZScale, 0.01);
+        _geometry.normal = normalize(_geometry.normal);
+        """
     }
 
     private static func ratio(
@@ -719,23 +694,11 @@ private struct AvatarDeformation {
         return min(max(targetProportion / max(referenceProportion, 0.001), 0.78), 1.28)
     }
 
-    private static func band(
-        _ value: Float,
-        _ lowerStart: Float,
-        _ lowerEnd: Float,
-        _ upperStart: Float,
-        _ upperEnd: Float
-    ) -> Float {
-        smoothstep(lowerStart, lowerEnd, value)
-            * (1 - smoothstep(upperStart, upperEnd, value))
-    }
-
-    private static func smoothstep(_ edge0: Float, _ edge1: Float, _ value: Float) -> Float {
-        let progress = min(max((value - edge0) / max(edge1 - edge0, 0.001), 0), 1)
-        return progress * progress * (3 - 2 * progress)
-    }
-
-    private static func mix(_ start: Float, _ end: Float, _ weight: Float) -> Float {
-        start + (end - start) * min(max(weight, 0), 1)
+    private static func format(_ value: Float) -> String {
+        String(
+            format: "%.6f",
+            locale: Locale(identifier: "en_US_POSIX"),
+            Double(value)
+        )
     }
 }

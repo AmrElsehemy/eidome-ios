@@ -207,7 +207,7 @@ def main() -> None:
     export_usdz(output / "eidome-anatomy.usdz", export_objects)
 
     report = {
-        "source": bpy.data.filepath,
+        "source": ".eidome-assets/source/Z-Anatomy/Startup.blend",
         "sourceRevision": SOURCE_REVISION,
         "blenderVersion": bpy.app.version_string,
         "referenceHeightMeters": REFERENCE_HEIGHT_METERS,

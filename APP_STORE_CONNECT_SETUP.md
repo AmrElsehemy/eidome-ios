@@ -1,116 +1,76 @@
 # App Store Connect setup
 
-The secure App Store Connect browser handoff is not currently available in this workspace. Complete the one-time app record manually; the repository contains upload-ready metadata and an optional Fastlane metadata lane.
+Eidome's listing metadata, review notes, and screenshot pipeline live in this repository. Credentials and private contact details stay outside git.
 
-## 1. Create the app record
-
-In App Store Connect, open **Apps**, click **+**, then **New App**:
+## App record
 
 | Field | Value |
 |---|---|
-| Platforms | iOS |
+| Platform | iOS |
 | Name | Eidome |
 | Primary language | English (U.S.) |
 | Bundle ID | ai.knowlly.eidome |
 | SKU | eidome-ios |
-| User access | Full Access |
+| Primary category | Health & Fitness |
+| Made for Kids | No |
+| Copyright | 2026 Knowlly DMCC |
+| Release | Manual |
 
-The bundle ID must already exist in Certificates, Identifiers & Profiles and must match the Xcode target exactly. The name and SKU cannot be assumed available until App Store Connect accepts them.
+Child profiles are adult-managed dependents; do not select the Kids Category.
 
-## 2. App Information
+## Public URLs
 
-- Primary category: Health & Fitness
-- Secondary category: None
-- Content rights: Eidome does not contain, show, or access third-party content
-- Made for Kids: No
-- Copyright: 2026 Knowlly DMCC
-- Regulated medical device: No; Eidome is a fitness-education and personal-tracking product, not a medical device
+- Marketing: https://eidome.com
+- Support: https://eidome.com/support
+- Privacy: https://eidome.com/privacy
 
-Do not claim that a child profile makes the app a Kids Category app. Child profiles are controlled by the adult device owner.
+The support and privacy pages must remain publicly reachable over HTTPS.
 
-## 3. Version metadata
+## Privacy and review
 
-The English (U.S.) source files are in `fastlane/metadata/en-US`.
+Use **Data Not Collected** only while the shipping binary remains fully local, with no analytics, crash SDK, cloud sync, advertising, telemetry, account, or API data transfer. Revisit the declaration before adding HealthKit, camera/video upload, AI services, authentication, or cloud sync.
 
-- Support URL: https://eidome.com/support
-- Marketing URL: https://eidome.com
-- Privacy Policy URL: https://eidome.com/privacy
-- Release: Manually release this version
+Enter a monitored review-contact name, email, and international phone number directly in App Store Connect. Private contact details are intentionally not stored in git. No reviewer login is required.
 
-Both support and privacy URLs must be public, use HTTPS, and return successful pages before submission.
+## API key and automated listing upload
 
-## 4. App Privacy
-
-For the current local-only build:
-
-- Select **No, we do not collect data from this app**
-- Publish the privacy response only after verifying that the shipping binary contains no analytics, crash-reporting SDK, accounts, cloud sync, API calls, advertising, or telemetry
-
-Revisit this declaration before adding HealthKit, camera/video upload, analytics, AI services, authentication, or cloud synchronization.
-
-## 5. Age rating and review declarations
-
-Answer according to the shipping binary:
-
-- User-generated content: None
-- Messaging or chat: None
-- Advertising: None
-- Unrestricted web access: No
-- Gambling, violence, sexual content, profanity, alcohol/tobacco/drugs: None
-- Medical or treatment information: None
-- Wellness or fitness information: Present only as basic personal tracking; no diagnosis or treatment
-
-Use the standard Apple EULA unless legal counsel requires a custom agreement.
-
-## 6. Review contact
-
-Enter a monitored Knowlly contact name, email address, and phone number in international format. The app does not require sign-in, so reviewer credentials are not required. Paste `fastlane/metadata/review_information/notes.txt` into Review Notes.
-
-## 7. Screenshots
-
-Because the Xcode target currently supports iPhone and iPad, provide at least one screenshot for each required family. Prefer a full set showing:
-
-1. Welcome and privacy
-2. Create a Twin
-3. Interactive 3D twin
-4. Body layers
-5. Measurements and mobility
-6. Multiple profiles
-7. Privacy and delete-all controls
-
-Apple accepts one to ten screenshots per device family. Screenshots cannot contain transparency.
-
-## 8. Build upload
-
-1. In Xcode, select the Eidome target and your Apple Developer team.
-2. Confirm automatic signing resolves `ai.knowlly.eidome`.
-3. Set the marketing version and a unique build number.
-4. Run on a physical iPhone and a supported iPad.
-5. Choose **Product → Archive**.
-6. In Organizer, run **Validate App**.
-7. Choose **Distribute App → App Store Connect → Upload**.
-8. Wait for processing, select the build in the app version, then complete export-compliance questions.
-
-The project declares `ITSAppUsesNonExemptEncryption = NO`; this is correct only while Eidome uses no non-exempt encryption.
-
-## Optional metadata upload with Fastlane
-
-Install dependencies:
-
-```bash
-bundle install
-```
-
-Create an App Store Connect team API key manually, then store these as local environment variables or GitHub Actions secrets:
+Create an App Store Connect team API key and add these GitHub repository secrets:
 
 - `ASC_KEY_ID`
 - `ASC_ISSUER_ID`
 - `ASC_KEY_CONTENT_BASE64`
 
-Never commit a `.p8` key. After the app record exists:
+Encode the downloaded key locally:
 
 ```bash
-bundle exec fastlane ios metadata
+base64 < AuthKey_YOUR_KEY_ID.p8 | tr -d '\n' | pbcopy
 ```
 
-The lane uploads text metadata only. It deliberately skips the binary and screenshots and keeps confirmation enabled.
+Never commit or share the `.p8` key.
+
+In GitHub, open **Actions → App Store Connect Assets → Run workflow**. Select `upload_metadata`, `upload_screenshots`, or `upload_release_assets`, then type `UPLOAD` exactly.
+
+The workflow cannot upload a binary, submit for review, or release a version.
+
+Local equivalents:
+
+```bash
+bundle install
+bundle exec fastlane ios upload_metadata
+
+bash scripts/capture-app-store-screenshots.sh
+bundle exec fastlane ios upload_screenshots
+```
+
+## First signed build
+
+The App Store icon is embedded in the binary and appears in App Store Connect after Apple processes the first signed upload.
+
+1. Open `Eidome.xcodeproj`.
+2. Confirm version `0.0.7`, build `7`, bundle ID `ai.knowlly.eidome`, and automatic signing.
+3. Run on physical iPhone and supported iPad.
+4. Choose **Product → Archive**.
+5. In Organizer, choose **Validate App**, then **Distribute App → App Store Connect → Upload**.
+6. Wait for processing and select the build in TestFlight/App Store Connect.
+
+Xcode Cloud can automate future signed builds after its one-time Apple-account authorization.

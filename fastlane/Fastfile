@@ -1,26 +1,58 @@
 default_platform(:ios)
 
+def eidome_api_key
+  required = %w[ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_CONTENT_BASE64]
+  missing = required.select { |name| ENV[name].to_s.empty? }
+  UI.user_error!("Missing secrets: #{missing.join(', ')}") unless missing.empty?
+
+  app_store_connect_api_key(
+    key_id: ENV["ASC_KEY_ID"],
+    issuer_id: ENV["ASC_ISSUER_ID"],
+    key_content: ENV["ASC_KEY_CONTENT_BASE64"],
+    is_key_content_base64: true
+  )
+end
+
+def eidome_deliver_options
+  {
+    api_key: eidome_api_key,
+    app_identifier: "ai.knowlly.eidome",
+    skip_binary_upload: true,
+    submit_for_review: false,
+    automatic_release: false,
+    precheck_include_in_app_purchases: false,
+    force: ENV["CI"] == "true"
+  }
+end
+
 platform :ios do
-  desc "Upload App Store text metadata without a binary or screenshots"
-  lane :metadata do
-    required = %w[ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_CONTENT_BASE64]
-    missing = required.select { |name| ENV[name].to_s.empty? }
-    UI.user_error!("Missing secrets: #{missing.join(', ')}") unless missing.empty?
+  desc "Upload App Store text metadata only"
+  lane :upload_metadata do
+    deliver(**eidome_deliver_options.merge(
+      skip_metadata: false,
+      skip_screenshots: true
+    ))
+  end
 
-    api_key = app_store_connect_api_key(
-      key_id: ENV["ASC_KEY_ID"],
-      issuer_id: ENV["ASC_ISSUER_ID"],
-      key_content: ENV["ASC_KEY_CONTENT_BASE64"],
-      is_key_content_base64: true
-    )
+  desc "Upload generated App Store screenshots only"
+  lane :upload_screenshots do
+    UI.user_error!("No screenshots found. Run scripts/capture-app-store-screenshots.sh first.") if Dir["fastlane/screenshots/**/*.png"].empty?
 
-    deliver(
-      api_key: api_key,
-      app_identifier: "ai.knowlly.eidome",
-      skip_binary_upload: true,
-      skip_screenshots: true,
-      precheck_include_in_app_purchases: false,
-      force: false
-    )
+    deliver(**eidome_deliver_options.merge(
+      skip_metadata: true,
+      skip_screenshots: false,
+      overwrite_screenshots: true
+    ))
+  end
+
+  desc "Upload App Store text metadata and screenshots"
+  lane :upload_release_assets do
+    UI.user_error!("No screenshots found. Run scripts/capture-app-store-screenshots.sh first.") if Dir["fastlane/screenshots/**/*.png"].empty?
+
+    deliver(**eidome_deliver_options.merge(
+      skip_metadata: false,
+      skip_screenshots: false,
+      overwrite_screenshots: true
+    ))
   end
 end

@@ -25,6 +25,14 @@ def main() -> None:
 
     manifest = json.loads(manifest_path.read_text())
     layers = manifest["layers"]
+    forbidden_guides = {"skeletal system.g"}
+    selected_names = {
+        name.strip().casefold()
+        for layer in layers.values()
+        for name in layer.get("sourceNames", [])
+    }
+    if selected_names & forbidden_guides:
+        raise SystemExit("Non-anatomical guide geometry entered the export.")
     requirements = {
         "skeleton": {"minimumObjects": 200, "maximumPolygons": 170_000},
         "muscles": {"minimumObjects": 100, "maximumPolygons": 220_000},
@@ -58,6 +66,15 @@ def main() -> None:
     positive_coverage = (
         muscle_bounds["maximum"][lateral_axis] - skeleton_center
     ) / skeleton_half_width
+    muscle_center = (
+        muscle_bounds["minimum"][lateral_axis]
+        + muscle_bounds["maximum"][lateral_axis]
+    ) / 2
+    center_offset = abs(muscle_center - skeleton_center) / skeleton_half_width
+    if center_offset > 0.15:
+        raise SystemExit(
+            f"Muscle and skeleton centers are misaligned ({center_offset:.2f})."
+        )
     if min(negative_coverage, positive_coverage) < 0.35:
         raise SystemExit(
             "Muscle layer does not cover both lateral halves "
@@ -73,6 +90,7 @@ def main() -> None:
                 "muscleObjects": layers["muscles"]["exportedObjects"],
                 "musclePolygons": layers["muscles"]["exportedPolygons"],
                 "muscleLateralCoverage": [negative_coverage, positive_coverage],
+                "muscleCenterOffset": center_offset,
             },
             indent=2,
         )

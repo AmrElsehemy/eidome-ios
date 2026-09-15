@@ -21,6 +21,7 @@
 		A1000000000000000000000C /* MobilityEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000D /* MobilityEditorView.swift */; };
 		A1000000000000000000000D /* AppSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000E /* AppSettingsView.swift */; };
 		A1000000000000000000000E /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000F /* PrivacyInfo.xcprivacy */; };
+		A1000000000000000000000F /* eidome-human.usdz in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000010 /* eidome-human.usdz */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -39,6 +40,7 @@
 		A2000000000000000000000D /* MobilityEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobilityEditorView.swift; sourceTree = "<group>"; };
 		A2000000000000000000000E /* AppSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettingsView.swift; sourceTree = "<group>"; };
 		A2000000000000000000000F /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		A20000000000000000000010 /* eidome-human.usdz */ = {isa = PBXFileReference; lastKnownFileType = file.usdz; path = Resources/Models/eidome-human.usdz; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -71,6 +73,7 @@
 				A40000000000000000000007 /* Views */,
 				A2000000000000000000000B /* Assets.xcassets */,
 				A2000000000000000000000F /* PrivacyInfo.xcprivacy */,
+				A20000000000000000000010 /* eidome-human.usdz */,
 			);
 			path = Eidome;
 			sourceTree = "<group>";
@@ -189,6 +192,7 @@
 			files = (
 				A1000000000000000000000B /* Assets.xcassets in Resources */,
 				A1000000000000000000000E /* PrivacyInfo.xcprivacy in Resources */,
+				A1000000000000000000000F /* eidome-human.usdz in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -314,7 +318,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Eidome;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
@@ -323,7 +327,7 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 0.0.4;
+				MARKETING_VERSION = 0.0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = ai.knowlly.eidome;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -339,7 +343,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Eidome;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
@@ -348,7 +352,7 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 0.0.4;
+				MARKETING_VERSION = 0.0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = ai.knowlly.eidome;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";

@@ -8,6 +8,11 @@ on:
         required: true
         default: feature/v0.05-human-avatar
         type: string
+      promote:
+        description: Commit the validated USDZ to the avatar branch
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -23,6 +28,8 @@ jobs:
     runs-on: [self-hosted, macOS, ARM64]
     environment: avatar-validation
     timeout-minutes: 15
+    outputs:
+      validated_sha: ${{ steps.revision.outputs.sha }}
 
     env:
       BLENDER_BIN: /Applications/Blender.app/Contents/MacOS/Blender
@@ -34,6 +41,10 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
+
+      - name: Capture validated revision
+        id: revision
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Verify Blender installation
         run: |
@@ -85,3 +96,46 @@ jobs:
             .eidome-assets/generated/human-poc/validation.json
             ${{ runner.temp }}/eidome-avatar-build.log
             ${{ runner.temp }}/eidome-avatar-validation.log
+
+  promote:
+    name: Promote validated USDZ
+    needs: validate
+    if: ${{ inputs.promote && inputs.ref == 'feature/v0.05-human-avatar' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out validated revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate.outputs.validated_sha }}
+          fetch-depth: 0
+
+      - name: Download validated artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: eidome-avatar-validation-${{ github.run_number }}
+          path: avatar-artifact
+
+      - name: Commit validated Apple asset
+        run: |
+          set -euo pipefail
+          source_asset="$(find avatar-artifact -type f -name eidome-human-poc.usdz -print -quit)"
+          test -n "$source_asset"
+          test -s "$source_asset"
+          mkdir -p Eidome/Resources/Models
+          cp "$source_asset" Eidome/Resources/Models/eidome-human.usdz
+
+          git config core.hooksPath /dev/null
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Eidome/Resources/Models/eidome-human.usdz
+
+          if git diff --cached --quiet; then
+            echo "Validated USDZ is unchanged; nothing to promote."
+            exit 0
+          fi
+
+          git commit -m "Add validated Eidome human asset"
+          git push origin HEAD:refs/heads/feature/v0.05-human-avatar

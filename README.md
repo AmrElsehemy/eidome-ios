@@ -17,6 +17,7 @@ Bundle identifier: `ai.knowlly.eidome`
 
 - Create a twin from name, relationship, biological sex, date of birth, height and weight
 - Render a validated, bundled USDZ human avatar using native SceneKit, with the parametric body retained as a safe fallback
+- Reopen generated USDZ assets with Apple SceneKit in CI before promotion
 - Support independent Me / Child / Other profiles
 - Persist profiles locally
 - Show twin completeness and distinguish measured, derived and estimated data

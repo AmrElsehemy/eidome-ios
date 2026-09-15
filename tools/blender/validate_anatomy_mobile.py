@@ -23,7 +23,18 @@ def main() -> None:
     if not zipfile.is_zipfile(usdz):
         raise SystemExit("Anatomy export is not a valid USDZ zip package.")
 
-    manifest = json.loads(manifest_path.read_text())
+    try:
+        manifest_text = manifest_path.read_text()
+    except OSError as exc:
+        raise SystemExit(f"Cannot read manifest file: {exc}") from exc
+    try:
+        manifest = json.loads(manifest_text)
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"Manifest contains invalid JSON: {exc}") from exc
+    required_keys = {"layers"}
+    missing = required_keys - manifest.keys()
+    if missing:
+        raise SystemExit(f"Manifest is missing required keys: {missing}")
     layers = manifest["layers"]
     forbidden_guides = {"skeletal system.g"}
     selected_names = {
@@ -38,6 +49,8 @@ def main() -> None:
         "muscles": {"minimumObjects": 100, "maximumPolygons": 220_000},
     }
     for name, requirement in requirements.items():
+        if name not in layers:
+            raise SystemExit(f"Manifest is missing required layer: {name}")
         layer = layers[name]
         if layer["exportedObjects"] < requirement["minimumObjects"]:
             raise SystemExit(f"{name} contains too few objects.")

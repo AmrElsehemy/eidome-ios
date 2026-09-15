@@ -58,16 +58,21 @@ def source_objects(layer: str) -> list[bpy.types.Object]:
 
 
 def world_bounds(objects: list[bpy.types.Object]) -> tuple[Vector, Vector]:
-    depsgraph = bpy.context.evaluated_depsgraph_get()
     points = []
     for obj in objects:
-        evaluated = obj.evaluated_get(depsgraph)
-        points.extend(evaluated.matrix_world @ Vector(corner) for corner in evaluated.bound_box)
+        points.extend(obj.matrix_world @ Vector(corner) for corner in obj.bound_box)
     if not points:
         raise RuntimeError("No geometry was selected for anatomy export.")
     minimum = Vector(tuple(min(point[index] for point in points) for index in range(3)))
     maximum = Vector(tuple(max(point[index] for point in points) for index in range(3)))
     return minimum, maximum
+
+
+def prune_unrelated_objects(keep: list[bpy.types.Object]) -> None:
+    retained = set(keep)
+    for obj in list(bpy.data.objects):
+        if obj not in retained:
+            bpy.data.objects.remove(obj, do_unlink=True)
 
 
 def material(name: str, color: tuple[float, float, float, float], roughness: float):
@@ -91,16 +96,12 @@ def copy_layer(
 ) -> tuple[bpy.types.Object, list[bpy.types.Object], dict]:
     root = bpy.data.objects.new(name, None)
     export_collection.objects.link(root)
-    depsgraph = bpy.context.evaluated_depsgraph_get()
     source_polygons = sum(len(obj.data.polygons) for obj in sources)
     ratio = min(1.0, target_polygons / max(source_polygons, 1))
     copies = []
 
     for index, source in enumerate(sources):
-        evaluated = source.evaluated_get(depsgraph)
-        mesh = bpy.data.meshes.new_from_object(
-            evaluated, preserve_all_data_layers=False, depsgraph=depsgraph
-        )
+        mesh = source.data.copy()
         mesh.name = f"{name}_{index:04d}_Mesh"
         mesh.materials.clear()
         mesh.materials.append(layer_material)
@@ -169,6 +170,11 @@ def main() -> None:
             f"Unexpected Z-Anatomy selection: {len(skeleton_sources)} skeleton, "
             f"{len(muscle_sources)} muscle objects."
         )
+
+    # Z-Anatomy's full scene contains unrelated curve dependencies. Retaining
+    # only the two requested mesh hierarchies prevents those dependencies from
+    # entering Blender's graph during the mobile decimation pass.
+    prune_unrelated_objects([*skeleton_sources, *muscle_sources])
 
     minimum, maximum = world_bounds(skeleton_sources)
     source_height = maximum.z - minimum.z

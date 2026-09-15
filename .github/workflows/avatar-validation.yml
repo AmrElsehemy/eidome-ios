@@ -1,6 +1,12 @@
 name: Avatar Validation
 
 on:
+  push:
+    branches:
+      - feature/v0.05-human-avatar
+    paths:
+      - .github/workflows/avatar-validation.yml
+      - tools/blender/**
   workflow_dispatch:
     inputs:
       ref:
@@ -39,7 +45,7 @@ jobs:
       - name: Check out selected avatar revision
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
 
       - name: Capture validated revision
@@ -111,7 +117,14 @@ jobs:
   promote:
     name: Promote validated USDZ
     needs: validate
-    if: ${{ inputs.promote && inputs.ref == 'feature/v0.05-human-avatar' }}
+    if: >-
+      ${{
+        (github.event_name == 'workflow_dispatch' &&
+          inputs.promote &&
+          inputs.ref == 'feature/v0.05-human-avatar') ||
+        (github.event_name == 'push' &&
+          github.ref_name == 'feature/v0.05-human-avatar')
+      }}
     runs-on: ubuntu-latest
     permissions:
       contents: write

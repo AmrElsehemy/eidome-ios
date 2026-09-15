@@ -45,9 +45,12 @@ do {
         -Float.greatestFiniteMagnitude
     )
 
-    func include(_ point: SCNVector3) throws {
+    var containsNonFiniteGeometry = false
+
+    func include(_ point: SCNVector3) {
         guard point.x.isFinite, point.y.isFinite, point.z.isFinite else {
-            try fail("USDZ contains non-finite geometry coordinates.")
+            containsNonFiniteGeometry = true
+            return
         }
         minimum.x = min(minimum.x, point.x)
         minimum.y = min(minimum.y, point.y)
@@ -77,10 +80,13 @@ do {
             SCNVector3(localMaximum.x, localMaximum.y, localMaximum.z),
         ]
         for corner in corners {
-            try? include(node.convertPosition(corner, to: scene.rootNode))
+            include(node.convertPosition(corner, to: scene.rootNode))
         }
     }
 
+    guard !containsNonFiniteGeometry else {
+        try fail("USDZ contains non-finite geometry coordinates.")
+    }
     guard geometryCount >= 3 else {
         try fail("Expected at least body, eyes, and clothing geometry; found \(geometryCount).")
     }

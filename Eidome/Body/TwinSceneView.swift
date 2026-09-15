@@ -1,3 +1,4 @@
+import Foundation
 import SceneKit
 import SwiftUI
 import UIKit
@@ -160,6 +161,8 @@ struct TwinSceneView: UIViewRepresentable {
         let sourceHeight = maximum.y - minimum.y
         guard sourceHeight.isFinite, sourceHeight > 0 else { return nil }
 
+        applyPersonalization(to: model, for: profile)
+
         let geometry = BodyGeometry(profile: profile)
         let scale = geometry.totalHeight / sourceHeight
         model.pivot = SCNMatrix4MakeTranslation(
@@ -172,6 +175,32 @@ struct TwinSceneView: UIViewRepresentable {
         model.eulerAngles.y = -.pi / 12
         model.name = "EidomeBundledHuman"
         return model
+    }
+
+    private func applyPersonalization(to model: SCNNode, for profile: TwinProfile) {
+        let deformation = AvatarDeformation(profile: profile)
+
+        model.enumerateChildNodes { node, _ in
+            guard let geometry = node.geometry else { return }
+            let label = [node.name, geometry.name]
+                .compactMap { $0?.lowercased() }
+                .joined(separator: " ")
+
+            if label.contains("eye") || label.contains("high-poly") {
+                return
+            }
+
+            let (minimum, maximum) = node.boundingBox
+            let isBody = label.contains("base") || label.contains("body")
+            if let personalized = deformation.geometry(
+                byDeforming: geometry,
+                minimumY: minimum.y,
+                maximumY: maximum.y,
+                isBody: isBody
+            ) {
+                node.geometry = personalized
+            }
+        }
     }
 
     private func makeExteriorBody(
@@ -493,5 +522,220 @@ struct TwinSceneView: UIViewRepresentable {
         material.metalness.contents = metalness
         material.roughness.contents = roughness
         return material
+    }
+}
+
+
+private struct AvatarDeformation {
+    private static let referenceGeometry: BodyGeometry = {
+        let birthDate = Calendar(identifier: .gregorian)
+            .date(from: DateComponents(year: 1986, month: 1, day: 1))
+            ?? Date(timeIntervalSince1970: 0)
+        let profile = TwinProfile(
+            name: "Reference",
+            relationship: .me,
+            biologicalSex: .male,
+            birthDate: birthDate,
+            heightCentimeters: 180,
+            weightKilograms: 85
+        )
+        return BodyGeometry(profile: profile)
+    }()
+
+    let shoulderX: Float
+    let chestX: Float
+    let chestZ: Float
+    let waistX: Float
+    let waistZ: Float
+    let hipX: Float
+    let hipZ: Float
+    let thigh: Float
+    let calf: Float
+
+    init(profile: TwinProfile) {
+        let target = BodyGeometry(profile: profile)
+        let reference = Self.referenceGeometry
+
+        shoulderX = Self.ratio(
+            target.shoulderWidth, target.totalHeight,
+            reference.shoulderWidth, reference.totalHeight
+        )
+        chestX = Self.ratio(
+            target.chestWidth, target.totalHeight,
+            reference.chestWidth, reference.totalHeight
+        )
+        chestZ = Self.ratio(
+            target.chestDepth, target.totalHeight,
+            reference.chestDepth, reference.totalHeight
+        )
+        waistX = Self.ratio(
+            target.waistWidth, target.totalHeight,
+            reference.waistWidth, reference.totalHeight
+        )
+        waistZ = Self.ratio(
+            target.waistDepth, target.totalHeight,
+            reference.waistDepth, reference.totalHeight
+        )
+        hipX = Self.ratio(
+            target.hipWidth, target.totalHeight,
+            reference.hipWidth, reference.totalHeight
+        )
+        hipZ = Self.ratio(
+            target.hipDepth, target.totalHeight,
+            reference.hipDepth, reference.totalHeight
+        )
+        thigh = Self.ratio(
+            target.thighRadius, target.totalHeight,
+            reference.thighRadius, reference.totalHeight
+        )
+        calf = Self.ratio(
+            target.calfRadius, target.totalHeight,
+            reference.calfRadius, reference.totalHeight
+        )
+    }
+
+    func geometry(
+        byDeforming geometry: SCNGeometry,
+        minimumY: Float,
+        maximumY: Float,
+        isBody: Bool
+    ) -> SCNGeometry? {
+        var sources = geometry.sources
+        guard
+            let vertexIndex = sources.firstIndex(where: { $0.semantic == .vertex }),
+            sources[vertexIndex].usesFloatComponents,
+            sources[vertexIndex].componentsPerVector >= 3,
+            sources[vertexIndex].bytesPerComponent == MemoryLayout<Float>.size,
+            sources[vertexIndex].dataOffset.isMultiple(of: MemoryLayout<Float>.alignment),
+            sources[vertexIndex].dataStride.isMultiple(of: MemoryLayout<Float>.alignment)
+        else {
+            return nil
+        }
+
+        let source = sources[vertexIndex]
+        var data = source.data
+        let height = max(maximumY - minimumY, 0.001)
+
+        data.withUnsafeMutableBytes { buffer in
+            guard let baseAddress = buffer.baseAddress else { return }
+
+            for index in 0..<source.vectorCount {
+                let offset = source.dataOffset + index * source.dataStride
+                guard offset + (2 * MemoryLayout<Float>.size) < buffer.count else { continue }
+
+                let xPointer = baseAddress
+                    .advanced(by: offset)
+                    .assumingMemoryBound(to: Float.self)
+                let yPointer = baseAddress
+                    .advanced(by: offset + MemoryLayout<Float>.size)
+                    .assumingMemoryBound(to: Float.self)
+                let zPointer = baseAddress
+                    .advanced(by: offset + 2 * MemoryLayout<Float>.size)
+                    .assumingMemoryBound(to: Float.self)
+
+                let scale = isBody
+                    ? bodyScale(x: xPointer.pointee, y: yPointer.pointee, minimumY: minimumY, height: height)
+                    : clothingScale(y: yPointer.pointee, minimumY: minimumY, height: height)
+
+                xPointer.pointee *= scale.x
+                zPointer.pointee *= scale.y
+            }
+        }
+
+        sources[vertexIndex] = SCNGeometrySource(
+            data: data,
+            semantic: .vertex,
+            vectorCount: source.vectorCount,
+            usesFloatComponents: source.usesFloatComponents,
+            componentsPerVector: source.componentsPerVector,
+            bytesPerComponent: source.bytesPerComponent,
+            dataOffset: source.dataOffset,
+            dataStride: source.dataStride
+        )
+
+        let personalized = SCNGeometry(sources: sources, elements: geometry.elements)
+        personalized.name = geometry.name
+        personalized.materials = geometry.materials
+        return personalized
+    }
+
+    private func bodyScale(
+        x: Float,
+        y: Float,
+        minimumY: Float,
+        height: Float
+    ) -> SIMD2<Float> {
+        let normalizedY = min(max((y - minimumY) / height, 0), 1)
+        let centrality = 1 - Self.smoothstep(
+            height * 0.15,
+            height * 0.31,
+            abs(x)
+        )
+
+        let calfWeight = Self.band(normalizedY, 0.04, 0.15, 0.27, 0.35)
+        let thighWeight = Self.band(normalizedY, 0.24, 0.34, 0.47, 0.53)
+        let hipWeight = Self.band(normalizedY, 0.43, 0.49, 0.56, 0.62)
+        let waistWeight = Self.band(normalizedY, 0.51, 0.58, 0.65, 0.71)
+        let chestWeight = Self.band(normalizedY, 0.60, 0.68, 0.76, 0.82)
+        let shoulderWeight = Self.band(normalizedY, 0.70, 0.76, 0.83, 0.88)
+
+        var xScale: Float = 1
+        xScale = Self.mix(xScale, calf, calfWeight * centrality)
+        xScale = Self.mix(xScale, thigh, thighWeight * centrality)
+        xScale = Self.mix(xScale, hipX, hipWeight * centrality)
+        xScale = Self.mix(xScale, waistX, waistWeight * centrality)
+        xScale = Self.mix(xScale, chestX, chestWeight * centrality)
+        xScale = Self.mix(xScale, shoulderX, shoulderWeight)
+
+        var zScale: Float = 1
+        zScale = Self.mix(zScale, calf, calfWeight)
+        zScale = Self.mix(zScale, thigh, thighWeight)
+        zScale = Self.mix(zScale, hipZ, hipWeight)
+        zScale = Self.mix(zScale, waistZ, waistWeight)
+        zScale = Self.mix(zScale, chestZ, chestWeight)
+
+        return SIMD2(xScale, zScale)
+    }
+
+    private func clothingScale(y: Float, minimumY: Float, height: Float) -> SIMD2<Float> {
+        let normalizedY = min(max((y - minimumY) / height, 0), 1)
+        let upperWeight = Self.smoothstep(0.18, 0.88, normalizedY)
+        let lowerX = (thigh + hipX) / 2
+        let lowerZ = (thigh + hipZ) / 2
+        return SIMD2(
+            Self.mix(lowerX, waistX, upperWeight),
+            Self.mix(lowerZ, waistZ, upperWeight)
+        )
+    }
+
+    private static func ratio(
+        _ targetValue: Float,
+        _ targetHeight: Float,
+        _ referenceValue: Float,
+        _ referenceHeight: Float
+    ) -> Float {
+        let targetProportion = targetValue / max(targetHeight, 0.001)
+        let referenceProportion = referenceValue / max(referenceHeight, 0.001)
+        return min(max(targetProportion / max(referenceProportion, 0.001), 0.78), 1.28)
+    }
+
+    private static func band(
+        _ value: Float,
+        _ lowerStart: Float,
+        _ lowerEnd: Float,
+        _ upperStart: Float,
+        _ upperEnd: Float
+    ) -> Float {
+        smoothstep(lowerStart, lowerEnd, value)
+            * (1 - smoothstep(upperStart, upperEnd, value))
+    }
+
+    private static func smoothstep(_ edge0: Float, _ edge1: Float, _ value: Float) -> Float {
+        let progress = min(max((value - edge0) / max(edge1 - edge0, 0.001), 0), 1)
+        return progress * progress * (3 - 2 * progress)
+    }
+
+    private static func mix(_ start: Float, _ end: Float, _ weight: Float) -> Float {
+        start + (end - start) * min(max(weight, 0), 1)
     }
 }

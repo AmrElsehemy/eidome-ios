@@ -1,4 +1,4 @@
-# Eidome v0.05
+# Eidome v0.06
 
 Eidome is a body-centric digital twin prototype for iPhone and iPad.
 
@@ -13,16 +13,17 @@ Official domain: [eidome.com](https://eidome.com)
 
 Bundle identifier: `ai.knowlly.eidome`
 
-## v0.05 scope
+## v0.06 scope
 
 - Create a twin from name, relationship, biological sex, date of birth, height and weight
 - Render a validated, bundled USDZ human avatar using native SceneKit, with the parametric body retained as a safe fallback
+- Deform the imported human at runtime from weight and regional body measurements
 - Reopen generated USDZ assets with Apple SceneKit in CI before promotion
 - Support independent Me / Child / Other profiles
 - Persist profiles locally
 - Show twin completeness and distinguish measured, derived and estimated data
 - Add optional shoulder, chest, waist, hip, inseam, thigh and calf measurements
-- Reshape the twin live while measurements are entered
+- Reshape the imported human live while weight and measurements are entered
 - Preserve profiles created with v0.01
 - Switch interactively between Body, Muscles, Skeleton and Joints
 - Keep the selected anatomical layer aligned to the personalized body geometry
@@ -42,4 +43,4 @@ The files in `docs/` are the source for `https://eidome.com/privacy` and
 
 See `APP_STORE_SUBMISSION.md` for the remaining App Store Connect work.
 
-The mannequin is a parametric estimate, not a scan or medically accurate anatomical model.
+The avatar is a parametric estimate, not a scan or medically accurate anatomical model.

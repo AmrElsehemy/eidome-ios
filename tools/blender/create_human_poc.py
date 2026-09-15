@@ -285,7 +285,7 @@ def export_static_usdz(
             selected_objects_only=True,
             export_animation=False,
             convert_orientation=True,
-            export_global_forward_selection="-Z",
+            export_global_forward_selection="NEGATIVE_Z",
             export_global_up_selection="Y",
         )
     finally:

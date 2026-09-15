@@ -364,16 +364,19 @@ private struct RefineTwinView: View {
     @EnvironmentObject private var profileStore: ProfileStore
     let profile: TwinProfile
     @State private var measurements: BodyMeasurements
+    @State private var heightCentimeters: Double
     @State private var weightKilograms: Double
 
     init(profile: TwinProfile) {
         self.profile = profile
         _measurements = State(initialValue: profile.bodyMeasurements ?? BodyMeasurements())
+        _heightCentimeters = State(initialValue: profile.heightCentimeters)
         _weightKilograms = State(initialValue: profile.weightKilograms)
     }
 
     private var previewProfile: TwinProfile {
         var copy = profile
+        copy.heightCentimeters = heightCentimeters
         copy.weightKilograms = weightKilograms
         copy.bodyMeasurements = measurements.isEmpty ? nil : measurements
         return copy
@@ -393,7 +396,12 @@ private struct RefineTwinView: View {
             return !entry.1.contains(value)
         }.count
 
-        return optionalMeasurementErrors + ((15.0...250.0).contains(weightKilograms) ? 0 : 1)
+        let requiredMetricErrors = [
+            (80.0...230.0).contains(heightCentimeters),
+            (15.0...250.0).contains(weightKilograms)
+        ].filter { !$0 }.count
+
+        return optionalMeasurementErrors + requiredMetricErrors
     }
 
     var body: some View {
@@ -417,6 +425,15 @@ private struct RefineTwinView: View {
 
                         VStack(spacing: 0) {
                             RequiredMetricInputRow(
+                                title: "Height",
+                                value: $heightCentimeters,
+                                unit: "cm"
+                            )
+                            Rectangle()
+                                .fill(EidomeTheme.line)
+                                .frame(height: 1)
+                                .padding(.leading, 16)
+                            RequiredMetricInputRow(
                                 title: "Weight",
                                 value: $weightKilograms,
                                 unit: "kg"
@@ -424,7 +441,7 @@ private struct RefineTwinView: View {
                         }
                         .glassCard()
 
-                        Text("Weight drives an estimated overall shape. Circumferences replace regional estimates with measured inputs.")
+                        Text("Height sets overall scale. Weight drives an estimated shape; circumferences replace regional estimates with measured inputs.")
                             .font(.caption)
                             .foregroundStyle(EidomeTheme.secondaryText)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -466,6 +483,7 @@ private struct RefineTwinView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         var updated = profile
+                        updated.heightCentimeters = heightCentimeters
                         updated.weightKilograms = weightKilograms
                         updated.bodyMeasurements = measurements.isEmpty ? nil : measurements
                         profileStore.update(updated)

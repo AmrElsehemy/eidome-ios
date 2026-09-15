@@ -1,0 +1,51 @@
+name: App Store Connect Assets
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Assets to upload
+        required: true
+        type: choice
+        options:
+          - upload_metadata
+          - upload_screenshots
+          - upload_release_assets
+      confirmation:
+        description: Type UPLOAD to authorize the App Store Connect write
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: app-store-connect-assets
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    if: ${{ inputs.confirmation == 'UPLOAD' }}
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        if: ${{ inputs.target != 'upload_metadata' }}
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      - name: Generate screenshots
+        if: ${{ inputs.target != 'upload_metadata' }}
+        run: bash scripts/capture-app-store-screenshots.sh
+
+      - name: Upload selected assets
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_CONTENT_BASE64: ${{ secrets.ASC_KEY_CONTENT_BASE64 }}
+        run: bundle exec fastlane ios "${{ inputs.target }}"

@@ -6,6 +6,7 @@ Run through build_anatomy_mobile.sh. The source Blender file is never saved.
 from __future__ import annotations
 
 import argparse
+import bmesh
 import json
 import sys
 from pathlib import Path
@@ -96,37 +97,60 @@ def copy_layer(
     target_polygons: int,
     layer_material: bpy.types.Material,
     export_collection: bpy.types.Collection,
+    mirror_axis: int | None = None,
 ) -> tuple[bpy.types.Object, list[bpy.types.Object], dict]:
     root = bpy.data.objects.new(name, None)
     export_collection.objects.link(root)
     source_polygons = sum(len(obj.data.polygons) for obj in sources)
-    ratio = min(1.0, target_polygons / max(source_polygons, 1))
+    variant_count = 2 if mirror_axis is not None else 1
+    ratio = min(1.0, target_polygons / max(source_polygons * variant_count, 1))
     copies = []
 
-    for index, source in enumerate(sources):
-        mesh = source.data.copy()
-        mesh.name = f"{name}_{index:04d}_Mesh"
-        mesh.materials.clear()
-        mesh.materials.append(layer_material)
-        for polygon in mesh.polygons:
-            polygon.material_index = 0
+    mirror = Matrix.Identity(4)
+    if mirror_axis is not None:
+        mirror[mirror_axis][mirror_axis] = -1
 
-        copied = bpy.data.objects.new(f"{name}_{index:04d}_{source.name}", mesh)
-        export_collection.objects.link(copied)
-        copied.matrix_world = normalization @ source.matrix_world
-        copied.parent = root
-        copied.matrix_parent_inverse = root.matrix_world.inverted()
-        copies.append(copied)
+    for source_index, source in enumerate(sources):
+        source_world = normalization @ source.matrix_world
+        variants = [("", None)]
+        if mirror_axis is not None:
+            variants.append(("_Mirrored", source_world.inverted() @ mirror @ source_world))
 
-        if ratio < 0.995 and len(mesh.polygons) >= 120:
-            modifier = copied.modifiers.new("Eidome Mobile Decimation", "DECIMATE")
-            modifier.ratio = max(ratio, 0.04)
-            modifier.use_collapse_triangulate = True
-            bpy.ops.object.select_all(action="DESELECT")
-            bpy.context.view_layer.objects.active = copied
-            copied.select_set(True)
-            bpy.ops.object.modifier_apply(modifier=modifier.name)
-            copied.select_set(False)
+        for variant_index, (suffix, local_transform) in enumerate(variants):
+            index = source_index * variant_count + variant_index
+            mesh = source.data.copy()
+            mesh.name = f"{name}_{index:04d}_Mesh"
+            if local_transform is not None:
+                mesh.transform(local_transform)
+                editable = bmesh.new()
+                editable.from_mesh(mesh)
+                bmesh.ops.reverse_faces(editable, faces=list(editable.faces))
+                editable.to_mesh(mesh)
+                editable.free()
+                mesh.update()
+            mesh.materials.clear()
+            mesh.materials.append(layer_material)
+            for polygon in mesh.polygons:
+                polygon.material_index = 0
+
+            copied = bpy.data.objects.new(
+                f"{name}_{index:04d}_{source.name}{suffix}", mesh
+            )
+            export_collection.objects.link(copied)
+            copied.matrix_world = source_world
+            copied.parent = root
+            copied.matrix_parent_inverse = root.matrix_world.inverted()
+            copies.append(copied)
+
+            if ratio < 0.995 and len(mesh.polygons) >= 120:
+                modifier = copied.modifiers.new("Eidome Mobile Decimation", "DECIMATE")
+                modifier.ratio = max(ratio, 0.04)
+                modifier.use_collapse_triangulate = True
+                bpy.ops.object.select_all(action="DESELECT")
+                bpy.context.view_layer.objects.active = copied
+                copied.select_set(True)
+                bpy.ops.object.modifier_apply(modifier=modifier.name)
+                copied.select_set(False)
 
     exported_polygons = sum(len(obj.data.polygons) for obj in copies)
     exported_minimum, exported_maximum = world_bounds(copies)
@@ -136,6 +160,7 @@ def copy_layer(
         "sourcePolygons": source_polygons,
         "exportedPolygons": exported_polygons,
         "decimationRatio": ratio,
+        "synthesizedMirrorAxis": mirror_axis,
         "boundsMeters": {
             "minimum": list(exported_minimum),
             "maximum": list(exported_maximum),
@@ -186,6 +211,7 @@ def main() -> None:
     scale = REFERENCE_HEIGHT_METERS / source_height
     center = Vector(((minimum.x + maximum.x) / 2, (minimum.y + maximum.y) / 2, minimum.z))
     normalization = Matrix.Scale(scale, 4) @ Matrix.Translation(-center)
+    lateral_axis = max(range(2), key=lambda index: (maximum - minimum)[index])
 
     export_collection = bpy.data.collections.new("Eidome Anatomy Export")
     bpy.context.scene.collection.children.link(export_collection)
@@ -198,7 +224,7 @@ def main() -> None:
     )
     muscle_root, muscles, muscle_report = copy_layer(
         "EidomeMuscles", muscle_sources, normalization,
-        args.muscle_polygons, muscle, export_collection,
+        args.muscle_polygons, muscle, export_collection, mirror_axis=lateral_axis,
     )
 
     export_objects = [skeleton_root, muscle_root, *skeleton, *muscles]

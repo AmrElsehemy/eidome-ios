@@ -364,20 +364,26 @@ private struct RefineTwinView: View {
     @EnvironmentObject private var profileStore: ProfileStore
     let profile: TwinProfile
     @State private var measurements: BodyMeasurements
+    @State private var heightCentimeters: Double
+    @State private var weightKilograms: Double
 
     init(profile: TwinProfile) {
         self.profile = profile
         _measurements = State(initialValue: profile.bodyMeasurements ?? BodyMeasurements())
+        _heightCentimeters = State(initialValue: profile.heightCentimeters)
+        _weightKilograms = State(initialValue: profile.weightKilograms)
     }
 
     private var previewProfile: TwinProfile {
         var copy = profile
+        copy.heightCentimeters = heightCentimeters
+        copy.weightKilograms = weightKilograms
         copy.bodyMeasurements = measurements.isEmpty ? nil : measurements
         return copy
     }
 
     private var invalidFieldCount: Int {
-        [
+        let optionalMeasurementErrors = [
             (measurements.shoulderWidthCentimeters, 20.0...70.0),
             (measurements.chestCircumferenceCentimeters, 40.0...180.0),
             (measurements.waistCircumferenceCentimeters, 35.0...180.0),
@@ -389,6 +395,13 @@ private struct RefineTwinView: View {
             guard let value = entry.0 else { return false }
             return !entry.1.contains(value)
         }.count
+
+        let requiredMetricErrors = [
+            (80.0...230.0).contains(heightCentimeters),
+            (15.0...250.0).contains(weightKilograms)
+        ].filter { !$0 }.count
+
+        return optionalMeasurementErrors + requiredMetricErrors
     }
 
     var body: some View {
@@ -409,6 +422,29 @@ private struct RefineTwinView: View {
                                 .foregroundStyle(EidomeTheme.secondaryText)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
+
+                        VStack(spacing: 0) {
+                            RequiredMetricInputRow(
+                                title: "Height",
+                                value: $heightCentimeters,
+                                unit: "cm"
+                            )
+                            Rectangle()
+                                .fill(EidomeTheme.line)
+                                .frame(height: 1)
+                                .padding(.leading, 16)
+                            RequiredMetricInputRow(
+                                title: "Weight",
+                                value: $weightKilograms,
+                                unit: "kg"
+                            )
+                        }
+                        .glassCard()
+
+                        Text("Height sets overall scale. Weight drives an estimated shape; circumferences replace regional estimates with measured inputs.")
+                            .font(.caption)
+                            .foregroundStyle(EidomeTheme.secondaryText)
+                            .frame(maxWidth: .infinity, alignment: .leading)
 
                         VStack(spacing: 0) {
                             MeasurementInputRow(title: "Shoulder width", value: $measurements.shoulderWidthCentimeters)
@@ -447,6 +483,8 @@ private struct RefineTwinView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         var updated = profile
+                        updated.heightCentimeters = heightCentimeters
+                        updated.weightKilograms = weightKilograms
                         updated.bodyMeasurements = measurements.isEmpty ? nil : measurements
                         profileStore.update(updated)
                         dismiss()
@@ -502,5 +540,38 @@ private struct MeasurementInputRow: View {
                     .padding(.leading, 16)
             }
         }
+    }
+}
+
+
+private struct RequiredMetricInputRow: View {
+    let title: String
+    @Binding var value: Double
+    let unit: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(title)
+                .font(.subheadline)
+            Spacer()
+            TextField(
+                "—",
+                value: $value,
+                format: .number.precision(.fractionLength(0...1))
+            )
+            .keyboardType(.decimalPad)
+            .multilineTextAlignment(.trailing)
+            .font(.body.monospacedDigit())
+            .frame(width: 76)
+            .padding(.vertical, 9)
+            .padding(.horizontal, 10)
+            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
+            Text(unit)
+                .font(.caption)
+                .foregroundStyle(EidomeTheme.secondaryText)
+                .frame(width: 22, alignment: .leading)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 7)
     }
 }

@@ -1,3 +1,4 @@
+import Foundation
 import SceneKit
 import SwiftUI
 import UIKit
@@ -160,6 +161,8 @@ struct TwinSceneView: UIViewRepresentable {
         let sourceHeight = maximum.y - minimum.y
         guard sourceHeight.isFinite, sourceHeight > 0 else { return nil }
 
+        applyPersonalization(to: model, for: profile)
+
         let geometry = BodyGeometry(profile: profile)
         let scale = geometry.totalHeight / sourceHeight
         model.pivot = SCNMatrix4MakeTranslation(
@@ -172,6 +175,30 @@ struct TwinSceneView: UIViewRepresentable {
         model.eulerAngles.y = -.pi / 12
         model.name = "EidomeBundledHuman"
         return model
+    }
+
+    private func applyPersonalization(to model: SCNNode, for profile: TwinProfile) {
+        let deformation = AvatarDeformation(profile: profile)
+        guard !deformation.isIdentity else { return }
+
+        model.enumerateChildNodes { node, _ in
+            guard let geometry = node.geometry else { return }
+            let label = [node.name, geometry.name]
+                .compactMap { $0?.lowercased() }
+                .joined(separator: " ")
+
+            if label.contains("eye") || label.contains("high-poly") {
+                return
+            }
+
+            let (minimum, maximum) = node.boundingBox
+            let isBody = label.contains("base") || label.contains("body")
+            geometry.shaderModifiers = [
+                .geometry: isBody
+                    ? deformation.bodyShader(minimumY: minimum.y, maximumY: maximum.y)
+                    : deformation.clothingShader(minimumY: minimum.y, maximumY: maximum.y)
+            ]
+        }
     }
 
     private func makeExteriorBody(
@@ -493,5 +520,185 @@ struct TwinSceneView: UIViewRepresentable {
         material.metalness.contents = metalness
         material.roughness.contents = roughness
         return material
+    }
+}
+
+
+private struct AvatarDeformation {
+    private static let referenceGeometry: BodyGeometry = {
+        let birthDate = Calendar(identifier: .gregorian)
+            .date(from: DateComponents(year: 1986, month: 1, day: 1))
+            ?? Date(timeIntervalSince1970: 0)
+        let profile = TwinProfile(
+            name: "Reference",
+            relationship: .me,
+            biologicalSex: .male,
+            birthDate: birthDate,
+            heightCentimeters: 180,
+            weightKilograms: 85
+        )
+        return BodyGeometry(profile: profile)
+    }()
+
+    let shoulderX: Float
+    let chestX: Float
+    let chestZ: Float
+    let waistX: Float
+    let waistZ: Float
+    let hipX: Float
+    let hipZ: Float
+    let thigh: Float
+    let calf: Float
+
+    init(profile: TwinProfile) {
+        let target = BodyGeometry(profile: profile)
+        let reference = Self.referenceGeometry
+
+        shoulderX = Self.ratio(
+            target.shoulderWidth, target.totalHeight,
+            reference.shoulderWidth, reference.totalHeight
+        )
+        chestX = Self.ratio(
+            target.chestWidth, target.totalHeight,
+            reference.chestWidth, reference.totalHeight
+        )
+        chestZ = Self.ratio(
+            target.chestDepth, target.totalHeight,
+            reference.chestDepth, reference.totalHeight
+        )
+        waistX = Self.ratio(
+            target.waistWidth, target.totalHeight,
+            reference.waistWidth, reference.totalHeight
+        )
+        waistZ = Self.ratio(
+            target.waistDepth, target.totalHeight,
+            reference.waistDepth, reference.totalHeight
+        )
+        hipX = Self.ratio(
+            target.hipWidth, target.totalHeight,
+            reference.hipWidth, reference.totalHeight
+        )
+        hipZ = Self.ratio(
+            target.hipDepth, target.totalHeight,
+            reference.hipDepth, reference.totalHeight
+        )
+        thigh = Self.ratio(
+            target.thighRadius, target.totalHeight,
+            reference.thighRadius, reference.totalHeight
+        )
+        calf = Self.ratio(
+            target.calfRadius, target.totalHeight,
+            reference.calfRadius, reference.totalHeight
+        )
+    }
+
+    var isIdentity: Bool {
+        [
+            shoulderX, chestX, chestZ, waistX, waistZ,
+            hipX, hipZ, thigh, calf
+        ].allSatisfy { abs($0 - 1) < 0.001 }
+    }
+
+    func bodyShader(minimumY: Float, maximumY: Float) -> String {
+        let height = max(maximumY - minimumY, 0.001)
+
+        return """
+        #pragma body
+        float eidomeY = clamp(
+            (_geometry.position.y - \(Self.format(minimumY))) / \(Self.format(height)),
+            0.0,
+            1.0
+        );
+        float eidomeCentral = 1.0 - smoothstep(
+            \(Self.format(height * 0.15)),
+            \(Self.format(height * 0.31)),
+            abs(_geometry.position.x)
+        );
+
+        float eidomeCalf = smoothstep(0.04, 0.15, eidomeY)
+            * (1.0 - smoothstep(0.27, 0.35, eidomeY));
+        float eidomeThigh = smoothstep(0.24, 0.34, eidomeY)
+            * (1.0 - smoothstep(0.47, 0.53, eidomeY));
+        float eidomeHip = smoothstep(0.43, 0.49, eidomeY)
+            * (1.0 - smoothstep(0.56, 0.62, eidomeY));
+        float eidomeWaist = smoothstep(0.51, 0.58, eidomeY)
+            * (1.0 - smoothstep(0.65, 0.71, eidomeY));
+        float eidomeChest = smoothstep(0.60, 0.68, eidomeY)
+            * (1.0 - smoothstep(0.76, 0.82, eidomeY));
+        float eidomeShoulder = smoothstep(0.70, 0.76, eidomeY)
+            * (1.0 - smoothstep(0.83, 0.88, eidomeY));
+
+        float eidomeXScale = 1.0;
+        eidomeXScale = mix(eidomeXScale, \(Self.format(calf)), eidomeCalf * eidomeCentral);
+        eidomeXScale = mix(eidomeXScale, \(Self.format(thigh)), eidomeThigh * eidomeCentral);
+        eidomeXScale = mix(eidomeXScale, \(Self.format(hipX)), eidomeHip * eidomeCentral);
+        eidomeXScale = mix(eidomeXScale, \(Self.format(waistX)), eidomeWaist * eidomeCentral);
+        eidomeXScale = mix(eidomeXScale, \(Self.format(chestX)), eidomeChest * eidomeCentral);
+        eidomeXScale = mix(eidomeXScale, \(Self.format(shoulderX)), eidomeShoulder);
+
+        float eidomeZScale = 1.0;
+        eidomeZScale = mix(eidomeZScale, \(Self.format(calf)), eidomeCalf);
+        eidomeZScale = mix(eidomeZScale, \(Self.format(thigh)), eidomeThigh);
+        eidomeZScale = mix(eidomeZScale, \(Self.format(hipZ)), eidomeHip);
+        eidomeZScale = mix(eidomeZScale, \(Self.format(waistZ)), eidomeWaist);
+        eidomeZScale = mix(eidomeZScale, \(Self.format(chestZ)), eidomeChest);
+
+        _geometry.position.x *= eidomeXScale;
+        _geometry.position.z *= eidomeZScale;
+        _geometry.normal.x /= max(eidomeXScale, 0.01);
+        _geometry.normal.z /= max(eidomeZScale, 0.01);
+        _geometry.normal = normalize(_geometry.normal);
+        """
+    }
+
+    func clothingShader(minimumY: Float, maximumY: Float) -> String {
+        let height = max(maximumY - minimumY, 0.001)
+        let clothingX = max(thigh, max(hipX, waistX)) * 1.03
+        let clothingZ = max(thigh, max(hipZ, waistZ)) * 1.03
+
+        return """
+        #pragma body
+        float eidomeY = clamp(
+            (_geometry.position.y - \(Self.format(minimumY))) / \(Self.format(height)),
+            0.0,
+            1.0
+        );
+        float eidomeHemEase = smoothstep(0.0, 0.18, eidomeY);
+        float eidomeXScale = mix(
+            \(Self.format(clothingX * 1.02)),
+            \(Self.format(clothingX)),
+            eidomeHemEase
+        );
+        float eidomeZScale = mix(
+            \(Self.format(clothingZ * 1.02)),
+            \(Self.format(clothingZ)),
+            eidomeHemEase
+        );
+
+        _geometry.position.x *= eidomeXScale;
+        _geometry.position.z *= eidomeZScale;
+        _geometry.normal.x /= max(eidomeXScale, 0.01);
+        _geometry.normal.z /= max(eidomeZScale, 0.01);
+        _geometry.normal = normalize(_geometry.normal);
+        """
+    }
+
+    private static func ratio(
+        _ targetValue: Float,
+        _ targetHeight: Float,
+        _ referenceValue: Float,
+        _ referenceHeight: Float
+    ) -> Float {
+        let targetProportion = targetValue / max(targetHeight, 0.001)
+        let referenceProportion = referenceValue / max(referenceHeight, 0.001)
+        return min(max(targetProportion / max(referenceProportion, 0.001), 0.78), 1.28)
+    }
+
+    private static func format(_ value: Float) -> String {
+        String(
+            format: "%.6f",
+            locale: Locale(identifier: "en_US_POSIX"),
+            Double(value)
+        )
     }
 }

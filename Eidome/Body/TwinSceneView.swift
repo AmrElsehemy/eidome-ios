@@ -653,8 +653,8 @@ private struct AvatarDeformation {
 
     func clothingShader(minimumY: Float, maximumY: Float) -> String {
         let height = max(maximumY - minimumY, 0.001)
-        let clothingX = max(thigh, hipX, waistX) * 1.03
-        let clothingZ = max(thigh, hipZ, waistZ) * 1.03
+        let clothingX = max(thigh, max(hipX, waistX)) * 1.03
+        let clothingZ = max(thigh, max(hipZ, waistZ)) * 1.03
 
         return """
         #pragma body

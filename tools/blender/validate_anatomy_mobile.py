@@ -1,0 +1,62 @@
+"""Validate the reproducible anatomy export before it can enter the app."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import zipfile
+from pathlib import Path
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--usdz", required=True)
+    parser.add_argument("--manifest", required=True)
+    args = parser.parse_args()
+    usdz = Path(args.usdz)
+    manifest_path = Path(args.manifest)
+
+    if not usdz.is_file() or usdz.stat().st_size < 100_000:
+        raise SystemExit("Anatomy USDZ is missing or implausibly small.")
+    if usdz.stat().st_size > 35_000_000:
+        raise SystemExit("Anatomy USDZ exceeds the 35 MB v0.08 mobile budget.")
+    if not zipfile.is_zipfile(usdz):
+        raise SystemExit("Anatomy export is not a valid USDZ zip package.")
+
+    manifest = json.loads(manifest_path.read_text())
+    layers = manifest["layers"]
+    requirements = {
+        "skeleton": {"minimumObjects": 200, "maximumPolygons": 170_000},
+        "muscles": {"minimumObjects": 100, "maximumPolygons": 220_000},
+    }
+    for name, requirement in requirements.items():
+        layer = layers[name]
+        if layer["exportedObjects"] < requirement["minimumObjects"]:
+            raise SystemExit(f"{name} contains too few objects.")
+        if layer["exportedPolygons"] <= 0:
+            raise SystemExit(f"{name} contains no polygons.")
+        if layer["exportedPolygons"] > requirement["maximumPolygons"]:
+            raise SystemExit(f"{name} exceeds its mobile polygon budget.")
+
+    skeleton_height = layers["skeleton"]["boundsMeters"]["size"][2]
+    if not 1.70 <= skeleton_height <= 1.74:
+        raise SystemExit(
+            f"Skeleton normalization is invalid ({skeleton_height:.3f} m high)."
+        )
+
+    print(
+        json.dumps(
+            {
+                "sizeBytes": usdz.stat().st_size,
+                "skeletonObjects": layers["skeleton"]["exportedObjects"],
+                "skeletonPolygons": layers["skeleton"]["exportedPolygons"],
+                "muscleObjects": layers["muscles"]["exportedObjects"],
+                "musclePolygons": layers["muscles"]["exportedPolygons"],
+            },
+            indent=2,
+        )
+    )
+
+
+if __name__ == "__main__":
+    main()

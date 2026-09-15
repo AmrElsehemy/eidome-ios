@@ -49,3 +49,9 @@ retain required attribution, and obtain a legal review of the ShareAlike impact.
 
 If the clothing enters a distributed build, preserve the author attribution and
 licence notice in the app's acknowledgements and release documentation.
+
+The v0.08 pipeline exports only the skeletal hierarchy and the
+`Superficial muscles` hierarchy. It emits a local structure-level manifest and
+does not commit or ship the derived binary. The generated output remains a
+private evaluation asset until visual, performance, attribution, and legal
+review are complete.

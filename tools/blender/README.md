@@ -96,3 +96,27 @@ BLENDER_BIN="/path/to/blender"
 ```
 
 Do not commit downloaded sources, reports, or generated intermediate assets.
+
+## 3. Generate the real-anatomy POC
+
+After the Z-Anatomy source has been bootstrapped, run:
+
+```bash
+bash tools/blender/build_anatomy_mobile.sh
+```
+
+The command selects the source's skeletal system and superficial muscles,
+normalizes both layers together to a 1.72 m reference body, applies mobile
+polygon budgets, and writes:
+
+```text
+.eidome-assets/generated/anatomy-mobile/eidome-anatomy.usdz
+.eidome-assets/generated/anatomy-mobile/eidome-anatomy-export.blend
+.eidome-assets/generated/anatomy-mobile/eidome-anatomy-manifest.json
+```
+
+The validator rejects missing layers, implausible object counts, oversized
+geometry, and USDZ packages above 35 MB. The manifest records the pinned source
+revision, selected structure names, source polygon counts, and exported polygon
+counts. Generated files remain local until their appearance, performance,
+attribution, and licensing have been reviewed.

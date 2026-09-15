@@ -44,6 +44,26 @@ def main() -> None:
             f"Skeleton normalization is invalid ({skeleton_height:.3f} m high)."
         )
 
+    skeleton_bounds = layers["skeleton"]["boundsMeters"]
+    muscle_bounds = layers["muscles"]["boundsMeters"]
+    lateral_axis = max(range(2), key=lambda index: skeleton_bounds["size"][index])
+    skeleton_center = (
+        skeleton_bounds["minimum"][lateral_axis]
+        + skeleton_bounds["maximum"][lateral_axis]
+    ) / 2
+    skeleton_half_width = skeleton_bounds["size"][lateral_axis] / 2
+    negative_coverage = (
+        skeleton_center - muscle_bounds["minimum"][lateral_axis]
+    ) / skeleton_half_width
+    positive_coverage = (
+        muscle_bounds["maximum"][lateral_axis] - skeleton_center
+    ) / skeleton_half_width
+    if min(negative_coverage, positive_coverage) < 0.35:
+        raise SystemExit(
+            "Muscle layer does not cover both lateral halves "
+            f"({negative_coverage:.2f}, {positive_coverage:.2f})."
+        )
+
     print(
         json.dumps(
             {
@@ -52,6 +72,7 @@ def main() -> None:
                 "skeletonPolygons": layers["skeleton"]["exportedPolygons"],
                 "muscleObjects": layers["muscles"]["exportedObjects"],
                 "musclePolygons": layers["muscles"]["exportedPolygons"],
+                "muscleLateralCoverage": [negative_coverage, positive_coverage],
             },
             indent=2,
         )

@@ -70,9 +70,12 @@ def world_bounds(objects: list[bpy.types.Object]) -> tuple[Vector, Vector]:
 
 def prune_unrelated_objects(keep: list[bpy.types.Object]) -> None:
     retained = set(keep)
+    world_matrices = {obj: obj.matrix_world.copy() for obj in keep}
     for obj in list(bpy.data.objects):
         if obj not in retained:
             bpy.data.objects.remove(obj, do_unlink=True)
+    for obj, matrix in world_matrices.items():
+        obj.matrix_world = matrix
 
 
 def material(name: str, color: tuple[float, float, float, float], roughness: float):

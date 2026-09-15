@@ -21,7 +21,7 @@ def eidome_deliver_options
     submit_for_review: false,
     automatic_release: false,
     precheck_include_in_app_purchases: false,
-    force: false
+    force: ENV["CI"] == "true"
   }
 end
 

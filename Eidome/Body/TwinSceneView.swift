@@ -130,9 +130,11 @@ struct TwinSceneView: UIViewRepresentable {
         case .body:
             makeBundledExteriorBody(for: profile) ?? makeExteriorBody(for: profile)
         case .muscles:
-            makeMuscleBody(for: profile)
+            makeBundledAnatomy(for: profile, rootName: "EidomeMuscles")
+                ?? makeMuscleBody(for: profile)
         case .skeleton:
-            makeSkeletonBody(for: profile)
+            makeBundledAnatomy(for: profile, rootName: "EidomeSkeleton")
+                ?? makeSkeletonBody(for: profile)
         case .joints:
             makeJointBody(for: profile)
         }
@@ -174,6 +176,47 @@ struct TwinSceneView: UIViewRepresentable {
         model.position = SCNVector3(0, -geometry.totalHeight / 2, 0)
         model.eulerAngles.y = -.pi / 12
         model.name = "EidomeBundledHuman"
+        return model
+    }
+
+    private func makeBundledAnatomy(
+        for profile: TwinProfile,
+        rootName: String
+    ) -> SCNNode? {
+        guard
+            let url = Bundle.main.url(
+                forResource: "eidome-anatomy",
+                withExtension: "usdz"
+            ),
+            let sourceScene = try? SCNScene(url: url, options: [
+                SCNSceneSource.LoadingOption.checkConsistency: true
+            ]),
+            let sourceRoot = sourceScene.rootNode.childNode(
+                withName: rootName,
+                recursively: true
+            )
+        else {
+            return nil
+        }
+
+        let model = sourceRoot.clone()
+        guard !model.childNodes.isEmpty else { return nil }
+
+        let (minimum, maximum) = model.boundingBox
+        let sourceHeight = maximum.y - minimum.y
+        guard sourceHeight.isFinite, sourceHeight > 0 else { return nil }
+
+        let geometry = BodyGeometry(profile: profile)
+        let scale = geometry.totalHeight / sourceHeight
+        model.pivot = SCNMatrix4MakeTranslation(
+            (minimum.x + maximum.x) / 2,
+            minimum.y,
+            (minimum.z + maximum.z) / 2
+        )
+        model.scale = SCNVector3(scale, scale, scale)
+        model.position = SCNVector3(0, -geometry.totalHeight / 2, 0)
+        model.eulerAngles.y = -.pi / 12
+        model.name = rootName
         return model
     }
 

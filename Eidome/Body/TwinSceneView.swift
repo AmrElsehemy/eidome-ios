@@ -144,7 +144,13 @@ struct TwinSceneView: UIViewRepresentable {
         )
         tapRecognizer.cancelsTouchesInView = false
         view.addGestureRecognizer(tapRecognizer)
-        configureScene(in: view, profile: profile, layer: layer, preservesCamera: false)
+        configureScene(
+            in: view,
+            profile: profile,
+            layer: layer,
+            coordinator: context.coordinator,
+            preservesCamera: false
+        )
         context.coordinator.lastProfile = profile
         context.coordinator.lastLayer = layer
         return view
@@ -160,6 +166,7 @@ struct TwinSceneView: UIViewRepresentable {
             in: view,
             profile: profile,
             layer: layer,
+            coordinator: context.coordinator,
             preservesCamera: preservesCamera
         )
         context.coordinator.lastProfile = profile
@@ -170,6 +177,9 @@ struct TwinSceneView: UIViewRepresentable {
         var lastProfile: TwinProfile?
         var lastLayer: TwinBodyLayer?
         var onStructureSelected: ((AnatomySelection) -> Void)?
+        var cachedAnatomyNodes: [
+            String: (node: SCNNode, worldTransform: SCNMatrix4)
+        ] = [:]
 
         init(onStructureSelected: ((AnatomySelection) -> Void)?) {
             self.onStructureSelected = onStructureSelected
@@ -209,13 +219,16 @@ struct TwinSceneView: UIViewRepresentable {
         in view: SCNView,
         profile: TwinProfile,
         layer: TwinBodyLayer,
+        coordinator: Coordinator,
         preservesCamera: Bool
     ) {
         let previousCameraTransform = preservesCamera
             ? view.pointOfView?.presentation.transform
             : nil
         let scene = SCNScene()
-        scene.rootNode.addChildNode(makeBody(for: profile, layer: layer))
+        scene.rootNode.addChildNode(
+            makeBody(for: profile, layer: layer, coordinator: coordinator)
+        )
         scene.rootNode.addChildNode(makeGroundRing(for: profile, layer: layer))
 
         let camera = SCNNode()
@@ -268,15 +281,27 @@ struct TwinSceneView: UIViewRepresentable {
         }
     }
 
-    private func makeBody(for profile: TwinProfile, layer: TwinBodyLayer) -> SCNNode {
+    private func makeBody(
+        for profile: TwinProfile,
+        layer: TwinBodyLayer,
+        coordinator: Coordinator
+    ) -> SCNNode {
         switch layer {
         case .body:
             makeBundledExteriorBody(for: profile) ?? makeExteriorBody(for: profile)
         case .muscles:
-            makeBundledAnatomy(for: profile, rootName: "EidomeMuscles")
+            makeBundledAnatomy(
+                for: profile,
+                rootName: "EidomeMuscles",
+                coordinator: coordinator
+            )
                 ?? makeMuscleBody(for: profile)
         case .skeleton:
-            makeBundledAnatomy(for: profile, rootName: "EidomeSkeleton")
+            makeBundledAnatomy(
+                for: profile,
+                rootName: "EidomeSkeleton",
+                coordinator: coordinator
+            )
                 ?? makeSkeletonBody(for: profile)
         case .joints:
             makeJointBody(for: profile)
@@ -324,25 +349,38 @@ struct TwinSceneView: UIViewRepresentable {
 
     private func makeBundledAnatomy(
         for profile: TwinProfile,
-        rootName: String
+        rootName: String,
+        coordinator: Coordinator
     ) -> SCNNode? {
-        guard
-            let url = Bundle.main.url(
-                forResource: "eidome-anatomy",
-                withExtension: "usdz"
-            ),
-            let sourceScene = try? SCNScene(url: url, options: [
-                SCNSceneSource.LoadingOption.checkConsistency: true
-            ]),
-            let sourceRoot = sourceScene.rootNode.childNode(
-                withName: rootName,
-                recursively: true
+        let sourceRoot: SCNNode
+        let sourceWorldTransform: SCNMatrix4
+        if let cached = coordinator.cachedAnatomyNodes[rootName] {
+            sourceRoot = cached.node
+            sourceWorldTransform = cached.worldTransform
+        } else {
+            guard
+                let url = Bundle.main.url(
+                    forResource: "eidome-anatomy",
+                    withExtension: "usdz"
+                ),
+                let sourceScene = try? SCNScene(url: url, options: [
+                    SCNSceneSource.LoadingOption.checkConsistency: true
+                ]),
+                let loaded = sourceScene.rootNode.childNode(
+                    withName: rootName,
+                    recursively: true
+                )
+            else {
+                return nil
+            }
+            sourceRoot = loaded
+            sourceWorldTransform = loaded.worldTransform
+            coordinator.cachedAnatomyNodes[rootName] = (
+                node: loaded,
+                worldTransform: sourceWorldTransform
             )
-        else {
-            return nil
         }
 
-        let sourceWorldTransform = sourceRoot.worldTransform
         let content = sourceRoot.clone()
         guard content.geometry != nil || !content.childNodes.isEmpty else { return nil }
 

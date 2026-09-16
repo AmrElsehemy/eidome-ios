@@ -33,7 +33,7 @@ enum TwinBodyLayer: String, CaseIterable, Identifiable {
     var modelNote: String {
         switch self {
         case .body: "Personalized estimate"
-        case .muscles: "Reference muscles · personalized shape"
+        case .muscles: "Reference muscles · height-scaled estimate"
         case .skeleton: "Reference skeleton · estimated proportions"
         case .joints: "Reference joint map · estimated positions"
         }
@@ -144,7 +144,7 @@ struct TwinSceneView: UIViewRepresentable {
         )
         tapRecognizer.cancelsTouchesInView = false
         view.addGestureRecognizer(tapRecognizer)
-        configureScene(in: view, profile: profile, layer: layer)
+        configureScene(in: view, profile: profile, layer: layer, preservesCamera: false)
         context.coordinator.lastProfile = profile
         context.coordinator.lastLayer = layer
         return view
@@ -153,7 +153,15 @@ struct TwinSceneView: UIViewRepresentable {
     func updateUIView(_ view: SCNView, context: Context) {
         context.coordinator.onStructureSelected = onStructureSelected
         guard context.coordinator.lastProfile != profile || context.coordinator.lastLayer != layer else { return }
-        configureScene(in: view, profile: profile, layer: layer)
+        let preservesCamera =
+            context.coordinator.lastLayer == layer &&
+            context.coordinator.lastProfile?.id == profile.id
+        configureScene(
+            in: view,
+            profile: profile,
+            layer: layer,
+            preservesCamera: preservesCamera
+        )
         context.coordinator.lastProfile = profile
         context.coordinator.lastLayer = layer
     }
@@ -197,8 +205,15 @@ struct TwinSceneView: UIViewRepresentable {
         }
     }
 
-    private func configureScene(in view: SCNView, profile: TwinProfile, layer: TwinBodyLayer) {
-        let previousCameraTransform = view.pointOfView?.presentation.transform
+    private func configureScene(
+        in view: SCNView,
+        profile: TwinProfile,
+        layer: TwinBodyLayer,
+        preservesCamera: Bool
+    ) {
+        let previousCameraTransform = preservesCamera
+            ? view.pointOfView?.presentation.transform
+            : nil
         let scene = SCNScene()
         scene.rootNode.addChildNode(makeBody(for: profile, layer: layer))
         scene.rootNode.addChildNode(makeGroundRing(for: profile, layer: layer))
@@ -248,6 +263,9 @@ struct TwinSceneView: UIViewRepresentable {
 
         view.scene = scene
         view.pointOfView = camera
+        if !preservesCamera {
+            view.defaultCameraController.target = SCNVector3(0, 0.02, 0)
+        }
     }
 
     private func makeBody(for profile: TwinProfile, layer: TwinBodyLayer) -> SCNNode {

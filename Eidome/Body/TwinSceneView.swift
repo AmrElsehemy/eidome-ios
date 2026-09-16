@@ -40,11 +40,89 @@ enum TwinBodyLayer: String, CaseIterable, Identifiable {
     }
 }
 
+
+struct AnatomySelection: Identifiable, Equatable {
+    enum Side: String {
+        case left = "Left"
+        case right = "Right"
+    }
+
+    let name: String
+    let layer: TwinBodyLayer
+    let side: Side?
+
+    var id: String {
+        "\(layer.rawValue):\(name):\(side?.rawValue ?? "Center")"
+    }
+
+    var category: String {
+        switch layer {
+        case .muscles: "Muscle / fascia"
+        case .skeleton: "Bone / cartilage"
+        default: "Anatomical structure"
+        }
+    }
+
+    fileprivate init?(node: SCNNode) {
+        var candidate: SCNNode? = node
+        while let current = candidate {
+            if let nodeName = current.name,
+               let parsed = Self.parse(nodeName: nodeName) {
+                self = parsed
+                return
+            }
+            candidate = current.parent
+        }
+        return nil
+    }
+
+    private static func parse(nodeName: String) -> AnatomySelection? {
+        let prefix: String
+        let layer: TwinBodyLayer
+        if nodeName.hasPrefix("EidomeMuscles_") {
+            prefix = "EidomeMuscles_"
+            layer = .muscles
+        } else if nodeName.hasPrefix("EidomeSkeleton_") {
+            prefix = "EidomeSkeleton_"
+            layer = .skeleton
+        } else {
+            return nil
+        }
+
+        var rawName = String(nodeName.dropFirst(prefix.count))
+        if let separator = rawName.firstIndex(of: "_"),
+           rawName[..<separator].allSatisfy(\.isNumber) {
+            rawName = String(rawName[rawName.index(after: separator)...])
+        }
+
+        let lowercased = rawName.lowercased()
+        let side: Side?
+        if lowercased.hasSuffix(".l") || lowercased.hasSuffix("_l") {
+            side = .left
+            rawName.removeLast(2)
+        } else if lowercased.hasSuffix(".r") || lowercased.hasSuffix("_r") {
+            side = .right
+            rawName.removeLast(2)
+        } else {
+            side = nil
+        }
+
+        let cleanName = rawName
+            .replacingOccurrences(of: "_", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanName.isEmpty else { return nil }
+        return AnatomySelection(name: cleanName, layer: layer, side: side)
+    }
+}
+
 struct TwinSceneView: UIViewRepresentable {
     let profile: TwinProfile
     var layer: TwinBodyLayer = .body
+    var onStructureSelected: ((AnatomySelection) -> Void)? = nil
 
-    func makeCoordinator() -> Coordinator { Coordinator() }
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onStructureSelected: onStructureSelected)
+    }
 
     func makeUIView(context: Context) -> SCNView {
         let view = SCNView()
@@ -54,6 +132,12 @@ struct TwinSceneView: UIViewRepresentable {
         view.defaultCameraController.interactionMode = .orbitTurntable
         view.defaultCameraController.inertiaEnabled = true
         view.autoenablesDefaultLighting = false
+        let tapRecognizer = UITapGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handleTap(_:))
+        )
+        tapRecognizer.cancelsTouchesInView = false
+        view.addGestureRecognizer(tapRecognizer)
         configureScene(in: view, profile: profile, layer: layer)
         context.coordinator.lastProfile = profile
         context.coordinator.lastLayer = layer
@@ -61,15 +145,50 @@ struct TwinSceneView: UIViewRepresentable {
     }
 
     func updateUIView(_ view: SCNView, context: Context) {
+        context.coordinator.onStructureSelected = onStructureSelected
         guard context.coordinator.lastProfile != profile || context.coordinator.lastLayer != layer else { return }
         configureScene(in: view, profile: profile, layer: layer)
         context.coordinator.lastProfile = profile
         context.coordinator.lastLayer = layer
     }
 
-    final class Coordinator {
+    final class Coordinator: NSObject {
         var lastProfile: TwinProfile?
         var lastLayer: TwinBodyLayer?
+        var onStructureSelected: ((AnatomySelection) -> Void)?
+
+        init(onStructureSelected: ((AnatomySelection) -> Void)?) {
+            self.onStructureSelected = onStructureSelected
+        }
+
+        @objc func handleTap(_ recognizer: UITapGestureRecognizer) {
+            guard
+                recognizer.state == .ended,
+                let view = recognizer.view as? SCNView
+            else { return }
+
+            let location = recognizer.location(in: view)
+            let results = view.hitTest(location, options: [
+                SCNHitTestOption.firstFoundOnly: false,
+                SCNHitTestOption.ignoreHiddenNodes: true
+            ])
+
+            guard let hit = results.first(where: {
+                AnatomySelection(node: $0.node) != nil
+            }), let selection = AnatomySelection(node: hit.node) else {
+                return
+            }
+
+            hit.node.removeAction(forKey: "eidomeSelectionPulse")
+            hit.node.runAction(
+                .sequence([
+                    .fadeOpacity(to: 0.55, duration: 0.08),
+                    .fadeOpacity(to: 1.0, duration: 0.18)
+                ]),
+                forKey: "eidomeSelectionPulse"
+            )
+            onStructureSelected?(selection)
+        }
     }
 
     private func configureScene(in view: SCNView, profile: TwinProfile, layer: TwinBodyLayer) {

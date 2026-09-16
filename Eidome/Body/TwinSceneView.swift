@@ -62,10 +62,20 @@ struct AnatomySelection: Identifiable, Equatable {
     }
 
     var category: String {
+        let normalizedName = name.lowercased()
         switch layer {
-        case .muscles: "Muscle / fascia"
-        case .skeleton: "Bone / cartilage"
-        default: "Anatomical structure"
+        case .muscles:
+            if normalizedName.contains("fascia") { return "Fascia" }
+            if normalizedName.contains("tendon") { return "Tendon" }
+            if normalizedName.contains("aponeurosis") { return "Aponeurosis" }
+            if normalizedName.contains("retinaculum") { return "Retinaculum" }
+            if normalizedName.contains("ligament") { return "Ligament" }
+            return "Muscle"
+        case .skeleton:
+            if normalizedName.contains("cartilage") { return "Cartilage" }
+            return "Bone"
+        default:
+            return "Anatomical structure"
         }
     }
 
@@ -82,7 +92,7 @@ struct AnatomySelection: Identifiable, Equatable {
         return nil
     }
 
-    private static func parse(nodeName: String) -> AnatomySelection? {
+    fileprivate static func parse(nodeName: String) -> AnatomySelection? {
         let prefix: String
         let layer: TwinBodyLayer
         if nodeName.hasPrefix("EidomeMuscles_") {
@@ -131,6 +141,8 @@ struct AnatomySelection: Identifiable, Equatable {
 struct TwinSceneView: UIViewRepresentable {
     let profile: TwinProfile
     var layer: TwinBodyLayer = .body
+    var focusedStructure: AnatomySelection? = nil
+    var hiddenStructureIDs: Set<String> = []
     var onStructureSelected: ((AnatomySelection) -> Void)? = nil
 
     func makeCoordinator() -> Coordinator {
@@ -156,41 +168,79 @@ struct TwinSceneView: UIViewRepresentable {
             profile: profile,
             layer: layer,
             coordinator: context.coordinator,
-            cameraTransform: nil
+            cameraState: nil
+        )
+        applyAnatomyDisplay(
+            in: view,
+            selection: focusedStructure,
+            hiddenStructureIDs: hiddenStructureIDs
         )
         context.coordinator.lastProfile = profile
         context.coordinator.lastLayer = layer
+        context.coordinator.lastFocusedStructure = focusedStructure
+        context.coordinator.lastHiddenStructureIDs = hiddenStructureIDs
         return view
     }
 
     func updateUIView(_ view: SCNView, context: Context) {
         context.coordinator.onStructureSelected = onStructureSelected
-        guard context.coordinator.lastProfile != profile || context.coordinator.lastLayer != layer else { return }
-        let isSameProfile = context.coordinator.lastProfile?.id == profile.id
-        if isSameProfile,
-           let previousLayer = context.coordinator.lastLayer,
-           let previousTransform = view.pointOfView?.presentation.transform {
-            context.coordinator.cameraTransforms[previousLayer] = previousTransform
-        } else if !isSameProfile {
-            context.coordinator.cameraTransforms.removeAll()
+        let rebuildsScene =
+            context.coordinator.lastProfile != profile ||
+            context.coordinator.lastLayer != layer
+
+        if rebuildsScene {
+            let isSameProfile = context.coordinator.lastProfile?.id == profile.id
+            if isSameProfile,
+               let previousLayer = context.coordinator.lastLayer,
+               let pointOfView = view.pointOfView {
+                context.coordinator.cameraStates[previousLayer] = Coordinator.CameraState(
+                    transform: pointOfView.presentation.transform,
+                    target: view.defaultCameraController.target,
+                    fieldOfView: pointOfView.camera?.fieldOfView ?? 31,
+                    orthographicScale: pointOfView.camera?.orthographicScale ?? 1
+                )
+            } else if !isSameProfile {
+                context.coordinator.cameraStates.removeAll()
+            }
+
+            configureScene(
+                in: view,
+                profile: profile,
+                layer: layer,
+                coordinator: context.coordinator,
+                cameraState: context.coordinator.cameraStates[layer]
+            )
+            context.coordinator.lastProfile = profile
+            context.coordinator.lastLayer = layer
         }
 
-        configureScene(
-            in: view,
-            profile: profile,
-            layer: layer,
-            coordinator: context.coordinator,
-            cameraTransform: context.coordinator.cameraTransforms[layer]
-        )
-        context.coordinator.lastProfile = profile
-        context.coordinator.lastLayer = layer
+        if rebuildsScene ||
+            context.coordinator.lastFocusedStructure != focusedStructure ||
+            context.coordinator.lastHiddenStructureIDs != hiddenStructureIDs {
+            applyAnatomyDisplay(
+                in: view,
+                selection: focusedStructure,
+                hiddenStructureIDs: hiddenStructureIDs
+            )
+            context.coordinator.lastFocusedStructure = focusedStructure
+            context.coordinator.lastHiddenStructureIDs = hiddenStructureIDs
+        }
     }
 
     final class Coordinator: NSObject {
         var lastProfile: TwinProfile?
         var lastLayer: TwinBodyLayer?
+        var lastFocusedStructure: AnatomySelection?
+        var lastHiddenStructureIDs: Set<String> = []
+        struct CameraState {
+            let transform: SCNMatrix4
+            let target: SCNVector3
+            let fieldOfView: CGFloat
+            let orthographicScale: Double
+        }
+
         var onStructureSelected: ((AnatomySelection) -> Void)?
-        var cameraTransforms: [TwinBodyLayer: SCNMatrix4] = [:]
+        var cameraStates: [TwinBodyLayer: CameraState] = [:]
         var cachedAnatomyNodes: [
             String: (node: SCNNode, worldTransform: SCNMatrix4)
         ] = [:]
@@ -229,12 +279,33 @@ struct TwinSceneView: UIViewRepresentable {
         }
     }
 
+    private func applyAnatomyDisplay(
+        in view: SCNView,
+        selection: AnatomySelection?,
+        hiddenStructureIDs: Set<String>
+    ) {
+        view.scene?.rootNode.enumerateChildNodes { node, _ in
+            guard
+                let nodeName = node.name,
+                let structure = AnatomySelection.parse(nodeName: nodeName)
+            else { return }
+
+            if let parentName = node.parent?.name,
+               AnatomySelection.parse(nodeName: parentName) != nil {
+                return
+            }
+
+            node.isHidden = hiddenStructureIDs.contains(structure.id)
+            node.opacity = selection == nil || structure == selection ? 1.0 : 0.08
+        }
+    }
+
     private func configureScene(
         in view: SCNView,
         profile: TwinProfile,
         layer: TwinBodyLayer,
         coordinator: Coordinator,
-        cameraTransform: SCNMatrix4?
+        cameraState: Coordinator.CameraState?
     ) {
         let scene = SCNScene()
         scene.rootNode.addChildNode(
@@ -242,12 +313,14 @@ struct TwinSceneView: UIViewRepresentable {
         )
         scene.rootNode.addChildNode(makeGroundRing(for: profile, layer: layer))
 
-        let camera = SCNNode()
-        camera.camera = SCNCamera()
+        let camera = view.pointOfView ?? SCNNode()
+        camera.removeFromParentNode()
+        if camera.camera == nil {
+            camera.camera = SCNCamera()
+        }
         camera.camera?.fieldOfView = 31
-        if let cameraTransform {
-            camera.transform = cameraTransform
-        } else {
+        if cameraState == nil {
+            camera.transform = SCNMatrix4Identity
             camera.position = SCNVector3(0, 0.08, 3.45)
             camera.look(at: SCNVector3(0, 0.02, 0))
         }
@@ -287,7 +360,13 @@ struct TwinSceneView: UIViewRepresentable {
 
         view.scene = scene
         view.pointOfView = camera
-        view.defaultCameraController.target = SCNVector3(0, 0.02, 0)
+        view.defaultCameraController.target =
+            cameraState?.target ?? SCNVector3(0, 0.02, 0)
+        if let cameraState {
+            camera.transform = cameraState.transform
+            camera.camera?.fieldOfView = cameraState.fieldOfView
+            camera.camera?.orthographicScale = cameraState.orthographicScale
+        }
     }
 
     private func makeBody(

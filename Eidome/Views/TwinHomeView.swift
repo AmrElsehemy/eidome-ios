@@ -10,6 +10,7 @@ struct TwinHomeView: View {
     @State private var isShowingSettings = false
     @State private var selectedStructure: AnatomySelection?
     @State private var focusedStructure: AnatomySelection?
+    @State private var hiddenStructureIDs: Set<String> = []
 
     var body: some View {
         ZStack {
@@ -110,6 +111,7 @@ struct TwinHomeView: View {
                 profile: profile,
                 layer: selectedLayer,
                 focusedStructure: focusedStructure,
+                hiddenStructureIDs: hiddenStructureIDs,
                 onStructureSelected: { selection in
                     withAnimation(.easeInOut(duration: 0.2)) {
                         if focusedStructure != selection {
@@ -140,6 +142,22 @@ struct TwinHomeView: View {
                 .padding(.vertical, 6)
                 .background(.ultraThinMaterial, in: Capsule())
 
+            if !hiddenStructureIDs.isEmpty {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        hiddenStructureIDs.removeAll()
+                    }
+                } label: {
+                    Label("Restore hidden anatomy", systemImage: "arrow.uturn.backward.circle")
+                        .font(.caption.bold())
+                        .foregroundStyle(EidomeTheme.cyan)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(EidomeTheme.panel, in: Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+
             if let selectedStructure {
                 anatomySelectionCard(selectedStructure)
                     .transition(.move(edge: .top).combined(with: .opacity))
@@ -155,6 +173,7 @@ struct TwinHomeView: View {
                         selectedLayer = layer
                         selectedStructure = nil
                         focusedStructure = nil
+                        hiddenStructureIDs.removeAll()
                     }
                 } label: {
                     VStack(spacing: 5) {
@@ -246,6 +265,25 @@ struct TwinHomeView: View {
                     ? "Restores all structures in this anatomy layer."
                     : "Dims surrounding anatomy to make this structure easier to inspect."
             )
+
+            if selection.category == "Fascia" {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        hiddenStructureIDs.insert(selection.id)
+                        selectedStructure = nil
+                        focusedStructure = nil
+                    }
+                } label: {
+                    Label("Reveal structures beneath", systemImage: "eye.slash")
+                        .font(.caption.bold())
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 9)
+                        .background(EidomeTheme.violet.opacity(0.34), in: RoundedRectangle(cornerRadius: 10))
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Temporarily hides this fascia so deeper visible structures can be selected.")
+            }
         }
         .padding(14)
         .glassCard()

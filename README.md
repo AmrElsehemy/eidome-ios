@@ -23,6 +23,7 @@ Bundle identifier: `ai.knowlly.eidome`
 - Show a compact selection card with side, structure category and data provenance
 - Focus a selected anatomical structure by dimming surrounding reference anatomy
 - Classify selected tissue more precisely instead of grouping fascia with muscle
+- Reveal superficial structures beneath fascia and restore hidden anatomy
 - Restore the full anatomy layer without losing that layer's rotation or zoom
 - Deform the imported human at runtime from weight and regional body measurements
 - Reopen generated USDZ assets with Apple SceneKit in CI before promotion

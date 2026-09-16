@@ -142,6 +142,7 @@ struct TwinSceneView: UIViewRepresentable {
     let profile: TwinProfile
     var layer: TwinBodyLayer = .body
     var focusedStructure: AnatomySelection? = nil
+    var hiddenStructureIDs: Set<String> = []
     var onStructureSelected: ((AnatomySelection) -> Void)? = nil
 
     func makeCoordinator() -> Coordinator {
@@ -169,10 +170,15 @@ struct TwinSceneView: UIViewRepresentable {
             coordinator: context.coordinator,
             cameraState: nil
         )
-        applyAnatomyFocus(in: view, selection: focusedStructure)
+        applyAnatomyDisplay(
+            in: view,
+            selection: focusedStructure,
+            hiddenStructureIDs: hiddenStructureIDs
+        )
         context.coordinator.lastProfile = profile
         context.coordinator.lastLayer = layer
         context.coordinator.lastFocusedStructure = focusedStructure
+        context.coordinator.lastHiddenStructureIDs = hiddenStructureIDs
         return view
     }
 
@@ -208,9 +214,16 @@ struct TwinSceneView: UIViewRepresentable {
             context.coordinator.lastLayer = layer
         }
 
-        if rebuildsScene || context.coordinator.lastFocusedStructure != focusedStructure {
-            applyAnatomyFocus(in: view, selection: focusedStructure)
+        if rebuildsScene ||
+            context.coordinator.lastFocusedStructure != focusedStructure ||
+            context.coordinator.lastHiddenStructureIDs != hiddenStructureIDs {
+            applyAnatomyDisplay(
+                in: view,
+                selection: focusedStructure,
+                hiddenStructureIDs: hiddenStructureIDs
+            )
             context.coordinator.lastFocusedStructure = focusedStructure
+            context.coordinator.lastHiddenStructureIDs = hiddenStructureIDs
         }
     }
 
@@ -218,6 +231,7 @@ struct TwinSceneView: UIViewRepresentable {
         var lastProfile: TwinProfile?
         var lastLayer: TwinBodyLayer?
         var lastFocusedStructure: AnatomySelection?
+        var lastHiddenStructureIDs: Set<String> = []
         struct CameraState {
             let transform: SCNMatrix4
             let target: SCNVector3
@@ -265,9 +279,10 @@ struct TwinSceneView: UIViewRepresentable {
         }
     }
 
-    private func applyAnatomyFocus(
+    private func applyAnatomyDisplay(
         in view: SCNView,
-        selection: AnatomySelection?
+        selection: AnatomySelection?,
+        hiddenStructureIDs: Set<String>
     ) {
         view.scene?.rootNode.enumerateChildNodes { node, _ in
             guard
@@ -280,6 +295,7 @@ struct TwinSceneView: UIViewRepresentable {
                 return
             }
 
+            node.isHidden = hiddenStructureIDs.contains(structure.id)
             node.opacity = selection == nil || structure == selection ? 1.0 : 0.08
         }
     }

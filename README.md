@@ -1,4 +1,4 @@
-# Eidome v0.10
+# Eidome v0.11
 
 Eidome is a body-centric digital twin prototype for iPhone and iPad.
 
@@ -13,7 +13,20 @@ Official domain: [eidome.com](https://eidome.com)
 
 Bundle identifier: `ai.knowlly.eidome`
 
-## v0.10 scope
+## v0.11 scope
+
+v0.11 is an explorer-UX release built on the validated v0.10 anatomy focus foundation.
+
+- Organize the 3D experience around three user intentions: Body, Anatomy and Joints
+- Keep Muscles and Skeleton as clear sublayers within Anatomy
+- Explain what each mode is for before asking the user to interact
+- Connect Body directly to measurements and Joints directly to mobility
+- Keep anatomy identification and isolation tools inside Anatomy
+- Provide an explicit Reset view action while preserving per-layer camera state
+- Make hidden anatomy state visible and reversible
+- Preserve honest measured, derived, estimated and reference labeling
+
+### Foundation retained from v0.10
 
 - Create a twin from name, relationship, biological sex, date of birth, height and weight
 - Render a validated, bundled USDZ human avatar using native SceneKit, with the parametric body retained as a safe fallback

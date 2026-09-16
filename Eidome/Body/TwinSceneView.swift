@@ -157,7 +157,7 @@ struct TwinSceneView: UIViewRepresentable {
             profile: profile,
             layer: layer,
             coordinator: context.coordinator,
-            cameraTransform: nil
+            cameraState: nil
         )
         applyAnatomyFocus(in: view, selection: focusedStructure)
         context.coordinator.lastProfile = profile
@@ -176,10 +176,13 @@ struct TwinSceneView: UIViewRepresentable {
             let isSameProfile = context.coordinator.lastProfile?.id == profile.id
             if isSameProfile,
                let previousLayer = context.coordinator.lastLayer,
-               let previousTransform = view.pointOfView?.presentation.transform {
-                context.coordinator.cameraTransforms[previousLayer] = previousTransform
+               let pointOfView = view.pointOfView {
+                context.coordinator.cameraStates[previousLayer] = Coordinator.CameraState(
+                    transform: pointOfView.presentation.transform,
+                    target: view.defaultCameraController.target
+                )
             } else if !isSameProfile {
-                context.coordinator.cameraTransforms.removeAll()
+                context.coordinator.cameraStates.removeAll()
             }
 
             configureScene(
@@ -187,7 +190,7 @@ struct TwinSceneView: UIViewRepresentable {
                 profile: profile,
                 layer: layer,
                 coordinator: context.coordinator,
-                cameraTransform: context.coordinator.cameraTransforms[layer]
+                cameraState: context.coordinator.cameraStates[layer]
             )
             context.coordinator.lastProfile = profile
             context.coordinator.lastLayer = layer
@@ -203,8 +206,13 @@ struct TwinSceneView: UIViewRepresentable {
         var lastProfile: TwinProfile?
         var lastLayer: TwinBodyLayer?
         var lastFocusedStructure: AnatomySelection?
+        struct CameraState {
+            let transform: SCNMatrix4
+            let target: SCNVector3
+        }
+
         var onStructureSelected: ((AnatomySelection) -> Void)?
-        var cameraTransforms: [TwinBodyLayer: SCNMatrix4] = [:]
+        var cameraStates: [TwinBodyLayer: CameraState] = [:]
         var cachedAnatomyNodes: [
             String: (node: SCNNode, worldTransform: SCNMatrix4)
         ] = [:]
@@ -267,7 +275,7 @@ struct TwinSceneView: UIViewRepresentable {
         profile: TwinProfile,
         layer: TwinBodyLayer,
         coordinator: Coordinator,
-        cameraTransform: SCNMatrix4?
+        cameraState: Coordinator.CameraState?
     ) {
         let scene = SCNScene()
         scene.rootNode.addChildNode(
@@ -275,12 +283,14 @@ struct TwinSceneView: UIViewRepresentable {
         )
         scene.rootNode.addChildNode(makeGroundRing(for: profile, layer: layer))
 
-        let camera = SCNNode()
-        camera.camera = SCNCamera()
+        let camera = view.pointOfView ?? SCNNode()
+        camera.removeFromParentNode()
+        if camera.camera == nil {
+            camera.camera = SCNCamera()
+        }
         camera.camera?.fieldOfView = 31
-        if let cameraTransform {
-            camera.transform = cameraTransform
-        } else {
+        if cameraState == nil {
+            camera.transform = SCNMatrix4Identity
             camera.position = SCNVector3(0, 0.08, 3.45)
             camera.look(at: SCNVector3(0, 0.02, 0))
         }
@@ -320,7 +330,11 @@ struct TwinSceneView: UIViewRepresentable {
 
         view.scene = scene
         view.pointOfView = camera
-        view.defaultCameraController.target = SCNVector3(0, 0.02, 0)
+        view.defaultCameraController.target =
+            cameraState?.target ?? SCNVector3(0, 0.02, 0)
+        if let cameraState {
+            camera.transform = cameraState.transform
+        }
     }
 
     private func makeBody(

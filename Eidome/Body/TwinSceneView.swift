@@ -51,6 +51,12 @@ struct AnatomySelection: Identifiable, Equatable {
     let layer: TwinBodyLayer
     let side: Side?
 
+    private init(name: String, layer: TwinBodyLayer, side: Side?) {
+        self.name = name
+        self.layer = layer
+        self.side = side
+    }
+
     var id: String {
         "\(layer.rawValue):\(name):\(side?.rawValue ?? "Center")"
     }

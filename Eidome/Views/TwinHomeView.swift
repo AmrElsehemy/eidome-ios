@@ -8,6 +8,7 @@ struct TwinHomeView: View {
     @State private var selectedLayer: TwinBodyLayer = .body
     @State private var isEditingMobility = false
     @State private var isShowingSettings = false
+    @State private var selectedStructure: AnatomySelection?
 
     var body: some View {
         ZStack {
@@ -104,11 +105,21 @@ struct TwinHomeView: View {
 
     private func twinStage(_ profile: TwinProfile) -> some View {
         VStack(spacing: 12) {
-            TwinSceneView(profile: profile, layer: selectedLayer)
+            TwinSceneView(
+                profile: profile,
+                layer: selectedLayer,
+                onStructureSelected: { selection in
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        selectedStructure = selection
+                    }
+                }
+            )
                 .frame(height: 420)
                 .id(profile.id)
 
-            Text("Drag to rotate · Pinch to zoom")
+            Text(selectedLayer == .muscles || selectedLayer == .skeleton
+                 ? "Tap a structure · Drag to rotate · Pinch to zoom"
+                 : "Drag to rotate · Pinch to zoom")
                 .font(.caption)
                 .foregroundStyle(EidomeTheme.secondaryText)
                 .padding(.horizontal, 12)
@@ -123,6 +134,11 @@ struct TwinHomeView: View {
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
                 .background(.ultraThinMaterial, in: Capsule())
+
+            if let selectedStructure {
+                anatomySelectionCard(selectedStructure)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
         }
     }
 
@@ -132,6 +148,7 @@ struct TwinHomeView: View {
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) {
                         selectedLayer = layer
+                        selectedStructure = nil
                     }
                 } label: {
                     VStack(spacing: 5) {
@@ -160,6 +177,54 @@ struct TwinHomeView: View {
                 .stroke(EidomeTheme.line, lineWidth: 1)
         }
         .padding(.horizontal, 20)
+    }
+
+    private func anatomySelectionCard(_ selection: AnatomySelection) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: selection.layer == .muscles ? "figure.strengthtraining.traditional" : "viewfinder")
+                .font(.title3)
+                .foregroundStyle(selection.layer == .muscles ? Color.red.opacity(0.85) : EidomeTheme.cyan)
+                .frame(width: 40, height: 40)
+                .background(EidomeTheme.panel, in: Circle())
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(selection.name)
+                    .font(.subheadline.bold())
+                    .lineLimit(2)
+                Text([selection.side?.rawValue, selection.category]
+                    .compactMap { $0 }
+                    .joined(separator: " · "))
+                    .font(.caption2)
+                    .foregroundStyle(EidomeTheme.secondaryText)
+                Text("Reference anatomy · not measured")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(EidomeTheme.cyan)
+            }
+
+            Spacer()
+
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    selectedStructure = nil
+                }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.caption.bold())
+                    .frame(width: 30, height: 30)
+                    .background(EidomeTheme.panel, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Clear selected structure")
+        }
+        .padding(14)
+        .glassCard()
+        .padding(.horizontal, 20)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(
+            [selection.side?.rawValue, selection.name, selection.category, "Reference anatomy, not measured"]
+                .compactMap { $0 }
+                .joined(separator: ", ")
+        )
     }
 
     private func identityCard(_ profile: TwinProfile) -> some View {

@@ -9,6 +9,7 @@ struct TwinHomeView: View {
     @State private var isEditingMobility = false
     @State private var isShowingSettings = false
     @State private var selectedStructure: AnatomySelection?
+    @State private var focusedStructure: AnatomySelection?
 
     var body: some View {
         ZStack {
@@ -108,8 +109,12 @@ struct TwinHomeView: View {
             TwinSceneView(
                 profile: profile,
                 layer: selectedLayer,
+                focusedStructure: focusedStructure,
                 onStructureSelected: { selection in
                     withAnimation(.easeInOut(duration: 0.2)) {
+                        if focusedStructure != selection {
+                            focusedStructure = nil
+                        }
                         selectedStructure = selection
                     }
                 }
@@ -149,6 +154,7 @@ struct TwinHomeView: View {
                     withAnimation(.easeInOut(duration: 0.2)) {
                         selectedLayer = layer
                         selectedStructure = nil
+                        focusedStructure = nil
                     }
                 } label: {
                     VStack(spacing: 5) {
@@ -180,51 +186,70 @@ struct TwinHomeView: View {
     }
 
     private func anatomySelectionCard(_ selection: AnatomySelection) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: selection.layer == .muscles ? "figure.strengthtraining.traditional" : "viewfinder")
-                .font(.title3)
-                .foregroundStyle(selection.layer == .muscles ? Color.red.opacity(0.85) : EidomeTheme.cyan)
-                .frame(width: 40, height: 40)
-                .background(EidomeTheme.panel, in: Circle())
+        VStack(spacing: 12) {
+            HStack(spacing: 12) {
+                Image(systemName: selection.layer == .muscles ? "figure.strengthtraining.traditional" : "viewfinder")
+                    .font(.title3)
+                    .foregroundStyle(selection.layer == .muscles ? Color.red.opacity(0.85) : EidomeTheme.cyan)
+                    .frame(width: 40, height: 40)
+                    .background(EidomeTheme.panel, in: Circle())
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(selection.name)
-                    .font(.subheadline.bold())
-                    .lineLimit(2)
-                Text([selection.side?.rawValue, selection.category]
-                    .compactMap { $0 }
-                    .joined(separator: " · "))
-                    .font(.caption2)
-                    .foregroundStyle(EidomeTheme.secondaryText)
-                Text("Reference anatomy · not measured")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(EidomeTheme.cyan)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(selection.name)
+                        .font(.subheadline.bold())
+                        .lineLimit(2)
+                    Text([selection.side?.rawValue, selection.category]
+                        .compactMap { $0 }
+                        .joined(separator: " · "))
+                        .font(.caption2)
+                        .foregroundStyle(EidomeTheme.secondaryText)
+                    Text("Reference anatomy · not measured")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(EidomeTheme.cyan)
+                }
+
+                Spacer()
+
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        selectedStructure = nil
+                        focusedStructure = nil
+                    }
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.caption.bold())
+                        .frame(width: 30, height: 30)
+                        .background(EidomeTheme.panel, in: Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Clear selected structure")
             }
-
-            Spacer()
 
             Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    selectedStructure = nil
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    focusedStructure = focusedStructure == selection ? nil : selection
                 }
             } label: {
-                Image(systemName: "xmark")
-                    .font(.caption.bold())
-                    .frame(width: 30, height: 30)
-                    .background(EidomeTheme.panel, in: Circle())
+                Label(
+                    focusedStructure == selection ? "Show full layer" : "Focus structure",
+                    systemImage: focusedStructure == selection ? "rectangle.expand.vertical" : "scope"
+                )
+                .font(.caption.bold())
+                .foregroundStyle(EidomeTheme.cyan)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 9)
+                .background(EidomeTheme.cyan.opacity(0.10), in: RoundedRectangle(cornerRadius: 10))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Clear selected structure")
+            .accessibilityHint(
+                focusedStructure == selection
+                    ? "Restores all structures in this anatomy layer."
+                    : "Dims surrounding anatomy to make this structure easier to inspect."
+            )
         }
         .padding(14)
         .glassCard()
         .padding(.horizontal, 20)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(
-            [selection.side?.rawValue, selection.name, selection.category, "Reference anatomy, not measured"]
-                .compactMap { $0 }
-                .joined(separator: ", ")
-        )
     }
 
     private func identityCard(_ profile: TwinProfile) -> some View {

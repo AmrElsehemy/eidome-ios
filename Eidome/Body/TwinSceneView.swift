@@ -82,7 +82,7 @@ struct AnatomySelection: Identifiable, Equatable {
         return nil
     }
 
-    private static func parse(nodeName: String) -> AnatomySelection? {
+    fileprivate static func parse(nodeName: String) -> AnatomySelection? {
         let prefix: String
         let layer: TwinBodyLayer
         if nodeName.hasPrefix("EidomeMuscles_") {
@@ -131,6 +131,7 @@ struct AnatomySelection: Identifiable, Equatable {
 struct TwinSceneView: UIViewRepresentable {
     let profile: TwinProfile
     var layer: TwinBodyLayer = .body
+    var focusedStructure: AnatomySelection? = nil
     var onStructureSelected: ((AnatomySelection) -> Void)? = nil
 
     func makeCoordinator() -> Coordinator {
@@ -158,37 +159,50 @@ struct TwinSceneView: UIViewRepresentable {
             coordinator: context.coordinator,
             cameraTransform: nil
         )
+        applyAnatomyFocus(in: view, selection: focusedStructure)
         context.coordinator.lastProfile = profile
         context.coordinator.lastLayer = layer
+        context.coordinator.lastFocusedStructure = focusedStructure
         return view
     }
 
     func updateUIView(_ view: SCNView, context: Context) {
         context.coordinator.onStructureSelected = onStructureSelected
-        guard context.coordinator.lastProfile != profile || context.coordinator.lastLayer != layer else { return }
-        let isSameProfile = context.coordinator.lastProfile?.id == profile.id
-        if isSameProfile,
-           let previousLayer = context.coordinator.lastLayer,
-           let previousTransform = view.pointOfView?.presentation.transform {
-            context.coordinator.cameraTransforms[previousLayer] = previousTransform
-        } else if !isSameProfile {
-            context.coordinator.cameraTransforms.removeAll()
+        let rebuildsScene =
+            context.coordinator.lastProfile != profile ||
+            context.coordinator.lastLayer != layer
+
+        if rebuildsScene {
+            let isSameProfile = context.coordinator.lastProfile?.id == profile.id
+            if isSameProfile,
+               let previousLayer = context.coordinator.lastLayer,
+               let previousTransform = view.pointOfView?.presentation.transform {
+                context.coordinator.cameraTransforms[previousLayer] = previousTransform
+            } else if !isSameProfile {
+                context.coordinator.cameraTransforms.removeAll()
+            }
+
+            configureScene(
+                in: view,
+                profile: profile,
+                layer: layer,
+                coordinator: context.coordinator,
+                cameraTransform: context.coordinator.cameraTransforms[layer]
+            )
+            context.coordinator.lastProfile = profile
+            context.coordinator.lastLayer = layer
         }
 
-        configureScene(
-            in: view,
-            profile: profile,
-            layer: layer,
-            coordinator: context.coordinator,
-            cameraTransform: context.coordinator.cameraTransforms[layer]
-        )
-        context.coordinator.lastProfile = profile
-        context.coordinator.lastLayer = layer
+        if rebuildsScene || context.coordinator.lastFocusedStructure != focusedStructure {
+            applyAnatomyFocus(in: view, selection: focusedStructure)
+            context.coordinator.lastFocusedStructure = focusedStructure
+        }
     }
 
     final class Coordinator: NSObject {
         var lastProfile: TwinProfile?
         var lastLayer: TwinBodyLayer?
+        var lastFocusedStructure: AnatomySelection?
         var onStructureSelected: ((AnatomySelection) -> Void)?
         var cameraTransforms: [TwinBodyLayer: SCNMatrix4] = [:]
         var cachedAnatomyNodes: [
@@ -226,6 +240,25 @@ struct TwinSceneView: UIViewRepresentable {
                 forKey: "eidomeSelectionPulse"
             )
             onStructureSelected?(selection)
+        }
+    }
+
+    private func applyAnatomyFocus(
+        in view: SCNView,
+        selection: AnatomySelection?
+    ) {
+        view.scene?.rootNode.enumerateChildNodes { node, _ in
+            guard
+                let nodeName = node.name,
+                let structure = AnatomySelection.parse(nodeName: nodeName)
+            else { return }
+
+            if let parentName = node.parent?.name,
+               AnatomySelection.parse(nodeName: parentName) != nil {
+                return
+            }
+
+            node.opacity = selection == nil || structure == selection ? 1.0 : 0.08
         }
     }
 

@@ -85,7 +85,9 @@ struct TwinSceneView: UIViewRepresentable {
     final class Coordinator {
         var lastProfile: TwinProfile?
         var lastLayer: TwinBodyLayer?
-        var cachedAnatomyNodes: [String: SCNNode] = [:]
+        var cachedAnatomyNodes: [
+            String: (node: SCNNode, worldTransform: SCNMatrix4)
+        ] = [:]
     }
 
     private func configureScene(
@@ -212,8 +214,10 @@ struct TwinSceneView: UIViewRepresentable {
         coordinator: Coordinator
     ) -> SCNNode? {
         let sourceRoot: SCNNode
+        let sourceWorldTransform: SCNMatrix4
         if let cached = coordinator.cachedAnatomyNodes[rootName] {
-            sourceRoot = cached
+            sourceRoot = cached.node
+            sourceWorldTransform = cached.worldTransform
         } else {
             guard
                 let url = Bundle.main.url(
@@ -230,11 +234,14 @@ struct TwinSceneView: UIViewRepresentable {
             else {
                 return nil
             }
-            coordinator.cachedAnatomyNodes[rootName] = loaded
             sourceRoot = loaded
+            sourceWorldTransform = loaded.worldTransform
+            coordinator.cachedAnatomyNodes[rootName] = (
+                node: loaded,
+                worldTransform: sourceWorldTransform
+            )
         }
 
-        let sourceWorldTransform = sourceRoot.worldTransform
         let content = sourceRoot.clone()
         guard content.geometry != nil || !content.childNodes.isEmpty else { return nil }
 

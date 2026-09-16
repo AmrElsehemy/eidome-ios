@@ -234,8 +234,13 @@ struct TwinSceneView: UIViewRepresentable {
             sourceRoot = loaded
         }
 
+        let sourceWorldTransform = sourceRoot.worldTransform
         let content = sourceRoot.clone()
         guard content.geometry != nil || !content.childNodes.isEmpty else { return nil }
+
+        // The named layer is nested below the USDZ scene root. Preserve the
+        // ancestor normalization transform before detaching the cloned layer.
+        content.transform = sourceWorldTransform
 
         let model = SCNNode()
         model.addChildNode(content)

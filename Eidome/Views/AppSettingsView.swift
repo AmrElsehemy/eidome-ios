@@ -46,6 +46,12 @@ struct AppSettingsView: View {
                     }
                 }
 
+                Section("Acknowledgements") {
+                    NavigationLink("Anatomy and avatar assets") {
+                        AssetAcknowledgementsView()
+                    }
+                }
+
                 Section("Model limitations") {
                     Label {
                         Text("Eidome creates estimates for fitness education and personal tracking. It is not a body scan, medical device, diagnosis, or treatment recommendation.")
@@ -112,6 +118,35 @@ private struct PrivacyNoticeView: View {
             }
         }
         .navigationTitle("Privacy notice")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+private struct AssetAcknowledgementsView: View {
+    var body: some View {
+        List {
+            Section("Z-Anatomy") {
+                Text("Eidome’s reference skeleton and superficial-muscle layers are derived from Z-Anatomy / Models of Human Anatomy.")
+                Link("View Z-Anatomy source", destination: URL(string: "https://github.com/Z-Anatomy/Models-of-human-anatomy")!)
+                Link("CC BY-SA 4.0 licence", destination: URL(string: "https://creativecommons.org/licenses/by-sa/4.0/")!)
+            }
+
+            Section("BodyParts3D") {
+                Text("Z-Anatomy is based in part on BodyParts3D, distributed under CC BY-SA 2.1 Japan.")
+                Link("CC BY-SA 2.1 Japan licence", destination: URL(string: "https://creativecommons.org/licenses/by-sa/2.1/jp/deed.en")!)
+            }
+
+            Section("MakeHuman and MPFB") {
+                Text("The exterior prototype was generated with MakeHuman and MPFB. Individual source assets retain their respective licences.")
+                Text("Prototype clothing: elvs_male_swim_shorts1 by Elvaerwyn, CC BY.")
+                Link("View MPFB source", destination: URL(string: "https://github.com/makehumancommunity/mpfb2")!)
+            }
+
+            Section("Model scope") {
+                Text("These models are simplified references for fitness education and personal tracking. They are not medical scans or diagnostic anatomy.")
+            }
+        }
+        .navigationTitle("Asset acknowledgements")
         .navigationBarTitleDisplayMode(.inline)
     }
 }

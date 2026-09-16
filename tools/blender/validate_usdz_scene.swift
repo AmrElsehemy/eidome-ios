@@ -18,7 +18,7 @@ func fail(_ message: String) throws -> Never {
 }
 
 guard CommandLine.arguments.count == 3 else {
-    fputs("Usage: validate_usdz_scene.swift <avatar.usdz> <report.json>\n", stderr)
+    fputs("Usage: validate_usdz_scene.swift <asset.usdz> <report.json>\n", stderr)
     exit(2)
 }
 
@@ -88,13 +88,13 @@ do {
         try fail("USDZ contains non-finite geometry coordinates.")
     }
     guard geometryCount >= 3 else {
-        try fail("Expected at least body, eyes, and clothing geometry; found \(geometryCount).")
+        try fail("Expected at least 3 geometry nodes; found \(geometryCount).")
     }
     guard materialCount >= 3 else {
-        try fail("Expected Apple-renderable materials on every avatar mesh.")
+        try fail("Expected Apple-renderable materials on every mesh.")
     }
     guard skinnerCount == 0 else {
-        try fail("Static iOS avatar unexpectedly contains \(skinnerCount) skinned nodes.")
+        try fail("Static iOS USDZ unexpectedly contains \(skinnerCount) skinned nodes.")
     }
 
     let width = maximum.x - minimum.x

@@ -54,7 +54,7 @@ struct TwinSceneView: UIViewRepresentable {
         view.defaultCameraController.interactionMode = .orbitTurntable
         view.defaultCameraController.inertiaEnabled = true
         view.autoenablesDefaultLighting = false
-        configureScene(in: view, profile: profile, layer: layer)
+        configureScene(in: view, profile: profile, layer: layer, coordinator: context.coordinator)
         context.coordinator.lastProfile = profile
         context.coordinator.lastLayer = layer
         return view
@@ -62,7 +62,7 @@ struct TwinSceneView: UIViewRepresentable {
 
     func updateUIView(_ view: SCNView, context: Context) {
         guard context.coordinator.lastProfile != profile || context.coordinator.lastLayer != layer else { return }
-        configureScene(in: view, profile: profile, layer: layer)
+        configureScene(in: view, profile: profile, layer: layer, coordinator: context.coordinator)
         context.coordinator.lastProfile = profile
         context.coordinator.lastLayer = layer
     }
@@ -70,12 +70,13 @@ struct TwinSceneView: UIViewRepresentable {
     final class Coordinator {
         var lastProfile: TwinProfile?
         var lastLayer: TwinBodyLayer?
+        var cachedAnatomyNodes: [String: SCNNode] = [:]
     }
 
-    private func configureScene(in view: SCNView, profile: TwinProfile, layer: TwinBodyLayer) {
+    private func configureScene(in view: SCNView, profile: TwinProfile, layer: TwinBodyLayer, coordinator: Coordinator) {
         let previousCameraTransform = view.pointOfView?.presentation.transform
         let scene = SCNScene()
-        scene.rootNode.addChildNode(makeBody(for: profile, layer: layer))
+        scene.rootNode.addChildNode(makeBody(for: profile, layer: layer, coordinator: coordinator))
         scene.rootNode.addChildNode(makeGroundRing(for: profile, layer: layer))
 
         let camera = SCNNode()
@@ -125,14 +126,16 @@ struct TwinSceneView: UIViewRepresentable {
         view.pointOfView = camera
     }
 
-    private func makeBody(for profile: TwinProfile, layer: TwinBodyLayer) -> SCNNode {
+    private func makeBody(for profile: TwinProfile, layer: TwinBodyLayer, coordinator: Coordinator) -> SCNNode {
         switch layer {
         case .body:
             makeBundledExteriorBody(for: profile) ?? makeExteriorBody(for: profile)
         case .muscles:
-            makeMuscleBody(for: profile)
+            makeBundledAnatomy(for: profile, rootName: "EidomeMuscles", coordinator: coordinator)
+                ?? makeMuscleBody(for: profile)
         case .skeleton:
-            makeSkeletonBody(for: profile)
+            makeBundledAnatomy(for: profile, rootName: "EidomeSkeleton", coordinator: coordinator)
+                ?? makeSkeletonBody(for: profile)
         case .joints:
             makeJointBody(for: profile)
         }
@@ -174,6 +177,55 @@ struct TwinSceneView: UIViewRepresentable {
         model.position = SCNVector3(0, -geometry.totalHeight / 2, 0)
         model.eulerAngles.y = -.pi / 12
         model.name = "EidomeBundledHuman"
+        return model
+    }
+
+    private func makeBundledAnatomy(
+        for profile: TwinProfile,
+        rootName: String,
+        coordinator: Coordinator
+    ) -> SCNNode? {
+        let sourceRoot: SCNNode
+        if let cached = coordinator.cachedAnatomyNodes[rootName] {
+            sourceRoot = cached
+        } else {
+            guard
+                let url = Bundle.main.url(
+                    forResource: "eidome-anatomy",
+                    withExtension: "usdz"
+                ),
+                let sourceScene = try? SCNScene(url: url, options: [
+                    SCNSceneSource.LoadingOption.checkConsistency: true
+                ]),
+                let loaded = sourceScene.rootNode.childNode(
+                    withName: rootName,
+                    recursively: true
+                )
+            else {
+                return nil
+            }
+            coordinator.cachedAnatomyNodes[rootName] = loaded
+            sourceRoot = loaded
+        }
+
+        let model = sourceRoot.clone()
+        guard !model.childNodes.isEmpty else { return nil }
+
+        let (minimum, maximum) = model.boundingBox
+        let sourceHeight = maximum.y - minimum.y
+        guard sourceHeight.isFinite, sourceHeight > 0 else { return nil }
+
+        let geometry = BodyGeometry(profile: profile)
+        let scale = geometry.totalHeight / sourceHeight
+        model.pivot = SCNMatrix4MakeTranslation(
+            (minimum.x + maximum.x) / 2,
+            minimum.y,
+            (minimum.z + maximum.z) / 2
+        )
+        model.scale = SCNVector3(scale, scale, scale)
+        model.position = SCNVector3(0, -geometry.totalHeight / 2, 0)
+        model.eulerAngles.y = -.pi / 12
+        model.name = rootName
         return model
     }
 

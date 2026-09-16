@@ -1,22 +1,28 @@
 # Third-party 3D assets
 
-This file records asset provenance from the first prototype. Inclusion here is
-not a final commercial-licensing decision.
+This file records the provenance of third-party assets used by Eidome. It is
+not legal advice or a substitute for a distribution-licensing review.
 
-## MPFB exterior-human prototype
+## MPFB / MakeHuman exterior human
 
 - Project: MPFB / MakeHuman Plugin for Blender
 - Source: https://github.com/makehumancommunity/mpfb2
-- Prototype use: generate the exterior body mesh from measurements
+- Current use: generate the bundled exterior prototype
+- Bundled file: `Eidome/Resources/Models/eidome-human.usdz`
 - Minimum documented Blender version: 4.2
-- Local use: private evaluation and mobile-export spike
-- Shipping status: no generated asset is included in the Eidome application yet
+- Prototype skin: `toigo_light_skin_male_bronze`
+- Skin source pack: MakeHuman Skins 02
+- Skin licence: CC0
+- Prototype clothing: `elvs_male_swim_shorts1`
+- Clothing source pack: MakeHuman Pants 03
+- Clothing author: Elvaerwyn
+- Clothing licence: CC BY
 
-MPFB code and generated-asset licensing are distinct. Before distributing a
-generated model, record the exact MPFB extension version and every asset pack,
-skin, body part, texture, and proxy used, then verify each asset's licence.
+MPFB code and generated-asset licensing are distinct. Preserve the clothing
+author attribution and verify the exact extension, eyes, body assets, textures,
+and proxy licences before public or commercial distribution.
 
-## Z-Anatomy prototype source
+## Z-Anatomy skeletal and muscular layers
 
 - Project: Z-Anatomy / Models of Human Anatomy
 - Source: https://github.com/Z-Anatomy/Models-of-human-anatomy
@@ -24,28 +30,17 @@ skin, body part, texture, and proxy used, then verify each asset's licence.
 - Pinned revision: `b9c9f98066e1e786814603b047c5bd3638c2a864`
 - Repository declaration: CC BY-SA 4.0
 - Upstream foundation: BodyParts3D, CC BY-SA 2.1 Japan
-- Local use: private evaluation, object inventory, mobile optimization spike
-- Shipping status: not included in the Eidome application
+- Bundled derived file: `Eidome/Resources/Models/eidome-anatomy.usdz`
+- Structure manifest: `docs/asset-manifests/z-anatomy-v0.08.json`
+- Included layers: 277 skeletal objects and 120 superficial muscle/fascia objects
+- Shipping status: included in the v0.08 prototype
 
-The upstream attribution file identifies some incorporated structures with
-non-commercial licences, including an inner-ear model and a kidney model.
-Those structures must not enter a commercial build without explicit review and
-replacement or permission.
+The export pipeline selects only the skeletal and superficial-muscle
+hierarchies, removes guide geometry, normalizes both layers to the same frame,
+and records every included source object in the manifest.
 
-Before any derived model is distributed, create a structure-level manifest,
-retain required attribution, and obtain a legal review of the ShareAlike impact.
-
-## MPFB prototype skin and clothing
-
-- Skin: `toigo_light_skin_male_bronze`
-- Skin source pack: MakeHuman Skins 02
-- Skin licence: CC0
-- Clothing: `elvs_male_swim_shorts1`
-- Clothing source pack: MakeHuman Pants 03
-- Clothing author: Elvaerwyn
-- Clothing licence: CC BY
-- Prototype use: validate fitted clothing, rigging, posing, and mobile export
-- Shipping status: not included in the Eidome application
-
-If the clothing enters a distributed build, preserve the author attribution and
-licence notice in the app's acknowledgements and release documentation.
+The upstream attribution file identifies some incorporated models with
+non-commercial terms. The committed structure manifest is the review source of
+truth; its contents and ShareAlike obligations must receive legal review before
+public or commercial distribution. Retain the required attribution and licence
+texts with any distributed derivative.

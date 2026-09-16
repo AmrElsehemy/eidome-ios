@@ -26,6 +26,13 @@ jobs:
       - name: Validate review assets
         run: bash scripts/validate-review-readiness.sh
 
+      - name: Reopen bundled anatomy with Apple SceneKit
+        run: |
+          xcrun swift tools/blender/validate_usdz_scene.swift \
+            Eidome/Resources/Models/eidome-anatomy.usdz \
+            "$RUNNER_TEMP/eidome-anatomy-scene-validation.json"
+          test -s "$RUNNER_TEMP/eidome-anatomy-scene-validation.json"
+
       - name: Debug simulator build
         run: |
           set -o pipefail

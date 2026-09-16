@@ -21,7 +21,8 @@ Bundle identifier: `ai.knowlly.eidome`
 - Preserve structure-level anatomy provenance in a committed export manifest
 - Identify real bones, muscles, tendons and fascia by tapping the 3D anatomy
 - Show a compact selection card with side, structure category and data provenance
-- Focus a selected muscle or bone by dimming surrounding reference anatomy
+- Focus a selected anatomical structure by dimming surrounding reference anatomy
+- Classify selected tissue more precisely instead of grouping fascia with muscle
 - Restore the full anatomy layer without losing that layer's rotation or zoom
 - Deform the imported human at runtime from weight and regional body measurements
 - Reopen generated USDZ assets with Apple SceneKit in CI before promotion

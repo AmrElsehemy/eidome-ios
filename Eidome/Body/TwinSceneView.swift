@@ -62,10 +62,20 @@ struct AnatomySelection: Identifiable, Equatable {
     }
 
     var category: String {
+        let normalizedName = name.lowercased()
         switch layer {
-        case .muscles: "Muscle / fascia"
-        case .skeleton: "Bone / cartilage"
-        default: "Anatomical structure"
+        case .muscles:
+            if normalizedName.contains("fascia") { return "Fascia" }
+            if normalizedName.contains("tendon") { return "Tendon" }
+            if normalizedName.contains("aponeurosis") { return "Aponeurosis" }
+            if normalizedName.contains("retinaculum") { return "Retinaculum" }
+            if normalizedName.contains("ligament") { return "Ligament" }
+            return "Muscle"
+        case .skeleton:
+            if normalizedName.contains("cartilage") { return "Cartilage" }
+            return "Bone"
+        default:
+            return "Anatomical structure"
         }
     }
 
@@ -179,7 +189,9 @@ struct TwinSceneView: UIViewRepresentable {
                let pointOfView = view.pointOfView {
                 context.coordinator.cameraStates[previousLayer] = Coordinator.CameraState(
                     transform: pointOfView.presentation.transform,
-                    target: view.defaultCameraController.target
+                    target: view.defaultCameraController.target,
+                    fieldOfView: pointOfView.camera?.fieldOfView ?? 31,
+                    orthographicScale: pointOfView.camera?.orthographicScale ?? 1
                 )
             } else if !isSameProfile {
                 context.coordinator.cameraStates.removeAll()
@@ -209,6 +221,8 @@ struct TwinSceneView: UIViewRepresentable {
         struct CameraState {
             let transform: SCNMatrix4
             let target: SCNVector3
+            let fieldOfView: CGFloat
+            let orthographicScale: Double
         }
 
         var onStructureSelected: ((AnatomySelection) -> Void)?
@@ -334,6 +348,8 @@ struct TwinSceneView: UIViewRepresentable {
             cameraState?.target ?? SCNVector3(0, 0.02, 0)
         if let cameraState {
             camera.transform = cameraState.transform
+            camera.camera?.fieldOfView = cameraState.fieldOfView
+            camera.camera?.orthographicScale = cameraState.orthographicScale
         }
     }
 

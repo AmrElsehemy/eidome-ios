@@ -342,25 +342,82 @@ struct TwinSceneView: UIViewRepresentable {
             return nil
         }
 
-        let model = sourceRoot.clone()
-        guard !model.childNodes.isEmpty else { return nil }
+        let content = sourceRoot.clone()
+        guard content.geometry != nil || !content.childNodes.isEmpty else { return nil }
 
-        let (minimum, maximum) = model.boundingBox
+        let model = SCNNode()
+        model.addChildNode(content)
+        guard let bounds = aggregateBoundingBox(of: model) else { return nil }
+
+        let minimum = bounds.minimum
+        let maximum = bounds.maximum
         let sourceHeight = maximum.y - minimum.y
         guard sourceHeight.isFinite, sourceHeight > 0 else { return nil }
 
         let geometry = BodyGeometry(profile: profile)
         let scale = geometry.totalHeight / sourceHeight
-        model.pivot = SCNMatrix4MakeTranslation(
-            (minimum.x + maximum.x) / 2,
-            minimum.y,
-            (minimum.z + maximum.z) / 2
+        content.position = SCNVector3(
+            content.position.x - (minimum.x + maximum.x) / 2,
+            content.position.y - minimum.y,
+            content.position.z - (minimum.z + maximum.z) / 2
         )
         model.scale = SCNVector3(scale, scale, scale)
         model.position = SCNVector3(0, -geometry.totalHeight / 2, 0)
         model.eulerAngles.y = -.pi / 12
         model.name = rootName
         return model
+    }
+
+    private func aggregateBoundingBox(
+        of root: SCNNode
+    ) -> (minimum: SCNVector3, maximum: SCNVector3)? {
+        var minimum = SCNVector3(
+            Float.greatestFiniteMagnitude,
+            Float.greatestFiniteMagnitude,
+            Float.greatestFiniteMagnitude
+        )
+        var maximum = SCNVector3(
+            -Float.greatestFiniteMagnitude,
+            -Float.greatestFiniteMagnitude,
+            -Float.greatestFiniteMagnitude
+        )
+        var includedGeometry = false
+
+        func includeGeometry(from node: SCNNode) {
+            guard node.geometry != nil else { return }
+            let (localMinimum, localMaximum) = node.boundingBox
+            let corners = [
+                SCNVector3(localMinimum.x, localMinimum.y, localMinimum.z),
+                SCNVector3(localMinimum.x, localMinimum.y, localMaximum.z),
+                SCNVector3(localMinimum.x, localMaximum.y, localMinimum.z),
+                SCNVector3(localMinimum.x, localMaximum.y, localMaximum.z),
+                SCNVector3(localMaximum.x, localMinimum.y, localMinimum.z),
+                SCNVector3(localMaximum.x, localMinimum.y, localMaximum.z),
+                SCNVector3(localMaximum.x, localMaximum.y, localMinimum.z),
+                SCNVector3(localMaximum.x, localMaximum.y, localMaximum.z)
+            ]
+
+            for corner in corners {
+                let point = node.convertPosition(corner, to: root)
+                guard point.x.isFinite, point.y.isFinite, point.z.isFinite else {
+                    continue
+                }
+                includedGeometry = true
+                minimum.x = min(minimum.x, point.x)
+                minimum.y = min(minimum.y, point.y)
+                minimum.z = min(minimum.z, point.z)
+                maximum.x = max(maximum.x, point.x)
+                maximum.y = max(maximum.y, point.y)
+                maximum.z = max(maximum.z, point.z)
+            }
+        }
+
+        includeGeometry(from: root)
+        root.enumerateChildNodes { node, _ in
+            includeGeometry(from: node)
+        }
+
+        return includedGeometry ? (minimum, maximum) : nil
     }
 
     private func applyPersonalization(to model: SCNNode, for profile: TwinProfile) {

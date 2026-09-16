@@ -107,7 +107,7 @@ def copy_layer(
 
     for index, source in enumerate(sources):
         mesh = source.data.copy()
-        mesh.name = f"{name}_{index:04d}_Mesh"
+        mesh.name = f"{name}_{index:04d}_{source.name}_Mesh"
         mesh.materials.clear()
         mesh.materials.append(layer_material)
         for polygon in mesh.polygons:

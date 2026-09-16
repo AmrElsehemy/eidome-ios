@@ -3,7 +3,7 @@ import SceneKit
 import SwiftUI
 import UIKit
 
-enum TwinBodyLayer: String, CaseIterable, Identifiable {
+enum TwinBodyLayer: String, CaseIterable, Identifiable, Hashable {
     case body = "Body"
     case muscles = "Muscles"
     case skeleton = "Skeleton"
@@ -101,6 +101,13 @@ struct AnatomySelection: Identifiable, Equatable {
             rawName = String(rawName[rawName.index(after: separator)...])
         }
 
+        if rawName.caseInsensitiveCompare("Mesh") == .orderedSame {
+            return nil
+        }
+        if rawName.lowercased().hasSuffix("_mesh") {
+            rawName.removeLast(5)
+        }
+
         let lowercased = rawName.lowercased()
         let side: Side?
         if lowercased.hasSuffix(".l") || lowercased.hasSuffix("_l") {
@@ -149,7 +156,7 @@ struct TwinSceneView: UIViewRepresentable {
             profile: profile,
             layer: layer,
             coordinator: context.coordinator,
-            preservesCamera: false
+            cameraTransform: nil
         )
         context.coordinator.lastProfile = profile
         context.coordinator.lastLayer = layer
@@ -159,15 +166,21 @@ struct TwinSceneView: UIViewRepresentable {
     func updateUIView(_ view: SCNView, context: Context) {
         context.coordinator.onStructureSelected = onStructureSelected
         guard context.coordinator.lastProfile != profile || context.coordinator.lastLayer != layer else { return }
-        let preservesCamera =
-            context.coordinator.lastLayer == layer &&
-            context.coordinator.lastProfile?.id == profile.id
+        let isSameProfile = context.coordinator.lastProfile?.id == profile.id
+        if isSameProfile,
+           let previousLayer = context.coordinator.lastLayer,
+           let previousTransform = view.pointOfView?.presentation.transform {
+            context.coordinator.cameraTransforms[previousLayer] = previousTransform
+        } else if !isSameProfile {
+            context.coordinator.cameraTransforms.removeAll()
+        }
+
         configureScene(
             in: view,
             profile: profile,
             layer: layer,
             coordinator: context.coordinator,
-            preservesCamera: preservesCamera
+            cameraTransform: context.coordinator.cameraTransforms[layer]
         )
         context.coordinator.lastProfile = profile
         context.coordinator.lastLayer = layer
@@ -177,6 +190,7 @@ struct TwinSceneView: UIViewRepresentable {
         var lastProfile: TwinProfile?
         var lastLayer: TwinBodyLayer?
         var onStructureSelected: ((AnatomySelection) -> Void)?
+        var cameraTransforms: [TwinBodyLayer: SCNMatrix4] = [:]
         var cachedAnatomyNodes: [
             String: (node: SCNNode, worldTransform: SCNMatrix4)
         ] = [:]
@@ -220,11 +234,8 @@ struct TwinSceneView: UIViewRepresentable {
         profile: TwinProfile,
         layer: TwinBodyLayer,
         coordinator: Coordinator,
-        preservesCamera: Bool
+        cameraTransform: SCNMatrix4?
     ) {
-        let previousCameraTransform = preservesCamera
-            ? view.pointOfView?.presentation.transform
-            : nil
         let scene = SCNScene()
         scene.rootNode.addChildNode(
             makeBody(for: profile, layer: layer, coordinator: coordinator)
@@ -234,8 +245,8 @@ struct TwinSceneView: UIViewRepresentable {
         let camera = SCNNode()
         camera.camera = SCNCamera()
         camera.camera?.fieldOfView = 31
-        if let previousCameraTransform {
-            camera.transform = previousCameraTransform
+        if let cameraTransform {
+            camera.transform = cameraTransform
         } else {
             camera.position = SCNVector3(0, 0.08, 3.45)
             camera.look(at: SCNVector3(0, 0.02, 0))
@@ -276,9 +287,7 @@ struct TwinSceneView: UIViewRepresentable {
 
         view.scene = scene
         view.pointOfView = camera
-        if !preservesCamera {
-            view.defaultCameraController.target = SCNVector3(0, 0.02, 0)
-        }
+        view.defaultCameraController.target = SCNVector3(0, 0.02, 0)
     }
 
     private func makeBody(

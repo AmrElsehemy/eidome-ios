@@ -33,7 +33,7 @@ enum TwinBodyLayer: String, CaseIterable, Identifiable {
     var modelNote: String {
         switch self {
         case .body: "Personalized estimate"
-        case .muscles: "Reference muscles · personalized shape"
+        case .muscles: "Reference muscles · height-scaled estimate"
         case .skeleton: "Reference skeleton · estimated proportions"
         case .joints: "Reference joint map · estimated positions"
         }
@@ -54,7 +54,13 @@ struct TwinSceneView: UIViewRepresentable {
         view.defaultCameraController.interactionMode = .orbitTurntable
         view.defaultCameraController.inertiaEnabled = true
         view.autoenablesDefaultLighting = false
-        configureScene(in: view, profile: profile, layer: layer, coordinator: context.coordinator)
+        configureScene(
+            in: view,
+            profile: profile,
+            layer: layer,
+            coordinator: context.coordinator,
+            preservesCamera: false
+        )
         context.coordinator.lastProfile = profile
         context.coordinator.lastLayer = layer
         return view
@@ -62,7 +68,16 @@ struct TwinSceneView: UIViewRepresentable {
 
     func updateUIView(_ view: SCNView, context: Context) {
         guard context.coordinator.lastProfile != profile || context.coordinator.lastLayer != layer else { return }
-        configureScene(in: view, profile: profile, layer: layer, coordinator: context.coordinator)
+        let preservesCamera =
+            context.coordinator.lastLayer == layer &&
+            context.coordinator.lastProfile?.id == profile.id
+        configureScene(
+            in: view,
+            profile: profile,
+            layer: layer,
+            coordinator: context.coordinator,
+            preservesCamera: preservesCamera
+        )
         context.coordinator.lastProfile = profile
         context.coordinator.lastLayer = layer
     }
@@ -70,11 +85,21 @@ struct TwinSceneView: UIViewRepresentable {
     final class Coordinator {
         var lastProfile: TwinProfile?
         var lastLayer: TwinBodyLayer?
-        var cachedAnatomyNodes: [String: SCNNode] = [:]
+        var cachedAnatomyNodes: [
+            String: (node: SCNNode, worldTransform: SCNMatrix4)
+        ] = [:]
     }
 
-    private func configureScene(in view: SCNView, profile: TwinProfile, layer: TwinBodyLayer, coordinator: Coordinator) {
-        let previousCameraTransform = view.pointOfView?.presentation.transform
+    private func configureScene(
+        in view: SCNView,
+        profile: TwinProfile,
+        layer: TwinBodyLayer,
+        coordinator: Coordinator,
+        preservesCamera: Bool
+    ) {
+        let previousCameraTransform = preservesCamera
+            ? view.pointOfView?.presentation.transform
+            : nil
         let scene = SCNScene()
         scene.rootNode.addChildNode(makeBody(for: profile, layer: layer, coordinator: coordinator))
         scene.rootNode.addChildNode(makeGroundRing(for: profile, layer: layer))
@@ -124,6 +149,9 @@ struct TwinSceneView: UIViewRepresentable {
 
         view.scene = scene
         view.pointOfView = camera
+        if !preservesCamera {
+            view.defaultCameraController.target = SCNVector3(0, 0.02, 0)
+        }
     }
 
     private func makeBody(for profile: TwinProfile, layer: TwinBodyLayer, coordinator: Coordinator) -> SCNNode {
@@ -186,8 +214,10 @@ struct TwinSceneView: UIViewRepresentable {
         coordinator: Coordinator
     ) -> SCNNode? {
         let sourceRoot: SCNNode
+        let sourceWorldTransform: SCNMatrix4
         if let cached = coordinator.cachedAnatomyNodes[rootName] {
-            sourceRoot = cached
+            sourceRoot = cached.node
+            sourceWorldTransform = cached.worldTransform
         } else {
             guard
                 let url = Bundle.main.url(
@@ -204,29 +234,94 @@ struct TwinSceneView: UIViewRepresentable {
             else {
                 return nil
             }
-            coordinator.cachedAnatomyNodes[rootName] = loaded
             sourceRoot = loaded
+            sourceWorldTransform = loaded.worldTransform
+            coordinator.cachedAnatomyNodes[rootName] = (
+                node: loaded,
+                worldTransform: sourceWorldTransform
+            )
         }
 
-        let model = sourceRoot.clone()
-        guard !model.childNodes.isEmpty else { return nil }
+        let content = sourceRoot.clone()
+        guard content.geometry != nil || !content.childNodes.isEmpty else { return nil }
 
-        let (minimum, maximum) = model.boundingBox
+        // The named layer is nested below the USDZ scene root. Preserve the
+        // ancestor normalization transform before detaching the cloned layer.
+        content.transform = sourceWorldTransform
+
+        let model = SCNNode()
+        model.addChildNode(content)
+        guard let bounds = aggregateBoundingBox(of: model) else { return nil }
+
+        let minimum = bounds.minimum
+        let maximum = bounds.maximum
         let sourceHeight = maximum.y - minimum.y
         guard sourceHeight.isFinite, sourceHeight > 0 else { return nil }
 
         let geometry = BodyGeometry(profile: profile)
         let scale = geometry.totalHeight / sourceHeight
-        model.pivot = SCNMatrix4MakeTranslation(
-            (minimum.x + maximum.x) / 2,
-            minimum.y,
-            (minimum.z + maximum.z) / 2
+        content.position = SCNVector3(
+            content.position.x - (minimum.x + maximum.x) / 2,
+            content.position.y - minimum.y,
+            content.position.z - (minimum.z + maximum.z) / 2
         )
         model.scale = SCNVector3(scale, scale, scale)
         model.position = SCNVector3(0, -geometry.totalHeight / 2, 0)
         model.eulerAngles.y = -.pi / 12
         model.name = rootName
         return model
+    }
+
+    private func aggregateBoundingBox(
+        of root: SCNNode
+    ) -> (minimum: SCNVector3, maximum: SCNVector3)? {
+        var minimum = SCNVector3(
+            Float.greatestFiniteMagnitude,
+            Float.greatestFiniteMagnitude,
+            Float.greatestFiniteMagnitude
+        )
+        var maximum = SCNVector3(
+            -Float.greatestFiniteMagnitude,
+            -Float.greatestFiniteMagnitude,
+            -Float.greatestFiniteMagnitude
+        )
+        var includedGeometry = false
+
+        func includeGeometry(from node: SCNNode) {
+            guard node.geometry != nil else { return }
+            let (localMinimum, localMaximum) = node.boundingBox
+            let corners = [
+                SCNVector3(localMinimum.x, localMinimum.y, localMinimum.z),
+                SCNVector3(localMinimum.x, localMinimum.y, localMaximum.z),
+                SCNVector3(localMinimum.x, localMaximum.y, localMinimum.z),
+                SCNVector3(localMinimum.x, localMaximum.y, localMaximum.z),
+                SCNVector3(localMaximum.x, localMinimum.y, localMinimum.z),
+                SCNVector3(localMaximum.x, localMinimum.y, localMaximum.z),
+                SCNVector3(localMaximum.x, localMaximum.y, localMinimum.z),
+                SCNVector3(localMaximum.x, localMaximum.y, localMaximum.z)
+            ]
+
+            for corner in corners {
+                let point = node.convertPosition(corner, to: root)
+                guard point.x.isFinite, point.y.isFinite, point.z.isFinite else {
+                    continue
+                }
+                includedGeometry = true
+                minimum.x = min(minimum.x, point.x)
+                minimum.y = min(minimum.y, point.y)
+                minimum.z = min(minimum.z, point.z)
+                maximum.x = max(maximum.x, point.x)
+                maximum.y = max(maximum.y, point.y)
+                maximum.z = max(maximum.z, point.z)
+            }
+        }
+
+        includeGeometry(from: root)
+        root.enumerateChildNodes { node, _ in
+            includeGeometry(from: node)
+        }
+
+        return includedGeometry ? (minimum, maximum) : nil
     }
 
     private func applyPersonalization(to model: SCNNode, for profile: TwinProfile) {

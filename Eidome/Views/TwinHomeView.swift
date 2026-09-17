@@ -7,7 +7,7 @@ private enum TwinExplorerMode: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-var symbol: String {
+    var symbol: String {
         switch self {
         case .body: TwinBodyLayer.body.symbol
         case .anatomy: TwinBodyLayer.muscles.symbol
@@ -175,6 +175,7 @@ struct TwinHomeView: View {
                     Label("Reset", systemImage: "arrow.counterclockwise")
                         .font(.caption.bold())
                         .foregroundStyle(EidomeTheme.cyan)
+                        .frame(minWidth: 44, minHeight: 44)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Reset 3D view")
@@ -228,7 +229,7 @@ struct TwinHomeView: View {
 
     private var explorerContextHeader: some View {
         HStack(alignment: .top, spacing: 12) {
-Image(systemName: selectedMode.symbol)
+            Image(systemName: selectedMode.symbol)
                 .font(.headline)
                 .foregroundStyle(EidomeTheme.cyan)
                 .frame(width: 38, height: 38)

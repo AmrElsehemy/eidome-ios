@@ -228,11 +228,12 @@ struct TwinHomeView: View {
 
     private var explorerContextHeader: some View {
         HStack(alignment: .top, spacing: 12) {
-            Image(systemName: selectedMode.symbol)
+Image(systemName: selectedMode.symbol)
                 .font(.headline)
                 .foregroundStyle(EidomeTheme.cyan)
                 .frame(width: 38, height: 38)
                 .background(EidomeTheme.cyan.opacity(0.11), in: Circle())
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(explorerTitle)

@@ -44,3 +44,7 @@ non-commercial terms. The committed structure manifest is the review source of
 truth; its contents and ShareAlike obligations must receive legal review before
 public or commercial distribution. Retain the required attribution and licence
 texts with any distributed derivative.
+
+## Evidence audit (2026-09-17)
+
+See [asset evidence audit](docs/ASSET_LICENSE_AUDIT.md) for verified source links and exact open items. The named non-commercial upstream contributions are kidney and inner ear; their presence in the exported geometry has NOT been established. Do not treat the whole anatomy collection as non-commercial or the name screen as clearance. The selected skin is credited to MargaretToigo under CC0. The clothing pack confirms Elvaerwyn and CC-BY but does not specify the version.

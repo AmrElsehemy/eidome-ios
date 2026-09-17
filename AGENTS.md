@@ -12,11 +12,11 @@ Every feature must contribute at least one of these: a measurable metric, a mode
 
 All twin data must remain distinguishable as measured, derived or estimated. Never imply medical accuracy from a parametric body model.
 
-## v0.11 boundary
+## v0.12 boundary
 
-Keep v0.11 focused on making the existing explorer understandable and purposeful. Body leads to measurements, Anatomy leads to structure inspection, and Joints leads to mobility. Do not add new anatomy assets or imply deeper anatomical precision in this version.
+Keep v0.12 focused on making the existing anatomy assets easy to discover, select and inspect. Users must be able to browse and search named source structures instead of relying only on precise 3D tapping.
 
-Anatomy remains a visual reference with estimated proportions, not a scan of the user's internal structures. HealthKit, accounts, video analysis and cloud infrastructure belong to later versions.
+Do not add new anatomy assets or imply finer anatomical segmentation than the source mesh provides. Anatomy remains a visual reference with estimated proportions, not a scan of the user's internal structures. HealthKit, accounts, video analysis and cloud infrastructure belong to later versions.
 
 ## Release rule
 

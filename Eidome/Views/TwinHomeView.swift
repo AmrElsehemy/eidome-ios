@@ -29,6 +29,8 @@ struct TwinHomeView: View {
     @State private var selectedStructure: AnatomySelection?
     @State private var focusedStructure: AnatomySelection?
     @State private var hiddenStructureIDs: Set<String> = []
+    @State private var availableStructures: [AnatomySelection] = []
+    @State private var isShowingAnatomyBrowser = false
 
     var body: some View {
         ZStack {
@@ -67,6 +69,18 @@ struct TwinHomeView: View {
         }
         .sheet(isPresented: $isShowingSettings) {
             AppSettingsView()
+        }
+        .sheet(isPresented: $isShowingAnatomyBrowser) {
+            AnatomyBrowserSheet(
+                layer: selectedLayer,
+                structures: availableStructures,
+                selectedStructure: selectedStructure
+            ) { selection in
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    selectedStructure = selection
+                    focusedStructure = selection
+                }
+            }
         }
     }
 
@@ -146,6 +160,9 @@ struct TwinHomeView: View {
                 focusedStructure: focusedStructure,
                 hiddenStructureIDs: hiddenStructureIDs,
                 cameraResetToken: sceneResetToken,
+                onAnatomyCatalogChanged: { catalog in
+                    availableStructures = catalog
+                },
                 onStructureSelected: { selection in
                     withAnimation(.easeInOut(duration: 0.2)) {
                         if focusedStructure != selection {
@@ -191,6 +208,10 @@ struct TwinHomeView: View {
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
                 .background(.ultraThinMaterial, in: Capsule())
+
+            if selectedMode == .anatomy {
+                anatomyBrowseCard
+            }
 
             if !hiddenStructureIDs.isEmpty {
                 HStack {
@@ -326,11 +347,49 @@ struct TwinHomeView: View {
         .padding(.horizontal, 42)
     }
 
+    private var anatomyBrowseCard: some View {
+        Button {
+            isShowingAnatomyBrowser = true
+        } label: {
+            HStack(spacing: 11) {
+                Image(systemName: "list.bullet.rectangle")
+                    .font(.headline)
+                    .foregroundStyle(EidomeTheme.cyan)
+                    .frame(width: 38, height: 38)
+                    .background(EidomeTheme.cyan.opacity(0.10), in: Circle())
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Browse structures")
+                        .font(.subheadline.bold())
+                    Text(
+                        availableStructures.isEmpty
+                            ? "Loading this anatomy layer…"
+                            : "\(availableStructures.count) named reference structures"
+                    )
+                    .font(.caption2)
+                    .foregroundStyle(EidomeTheme.secondaryText)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.bold())
+                    .foregroundStyle(EidomeTheme.secondaryText)
+            }
+            .padding(12)
+            .background(EidomeTheme.panel, in: RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
+        .disabled(availableStructures.isEmpty)
+        .padding(.horizontal, 20)
+        .accessibilityHint("Search and select structures that may be difficult to tap in the 3D model.")
+    }
+
     private var anatomyEmptyState: some View {
         HStack(spacing: 10) {
             Image(systemName: "hand.tap")
                 .foregroundStyle(EidomeTheme.cyan)
-            Text("Tap a visible structure to identify and isolate it.")
+            Text("Tap the model or browse the structure list to identify and isolate anatomy.")
                 .font(.caption)
                 .foregroundStyle(EidomeTheme.secondaryText)
             Spacer()
@@ -426,7 +485,7 @@ struct TwinHomeView: View {
                 }
             } label: {
                 Label(
-                    focusedStructure == selection ? "Show full layer" : "Focus structure",
+                    focusedStructure == selection ? "Show full layer" : "Isolate structure",
                     systemImage: focusedStructure == selection ? "rectangle.expand.vertical" : "scope"
                 )
                 .font(.caption.bold())
@@ -590,6 +649,144 @@ struct TwinHomeView: View {
 
     private var divider: some View {
         Rectangle().fill(EidomeTheme.line).frame(width: 1, height: 34)
+    }
+}
+
+
+private struct AnatomyBrowserSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let layer: TwinBodyLayer
+    let structures: [AnatomySelection]
+    let selectedStructure: AnatomySelection?
+    let onSelect: (AnatomySelection) -> Void
+
+    @State private var searchText = ""
+    @State private var selectedCategory = "All"
+
+    private var categories: [String] {
+        ["All"] + Set(structures.map(\.category)).sorted()
+    }
+
+    private var filteredStructures: [AnatomySelection] {
+        structures.filter { structure in
+            let matchesCategory =
+                selectedCategory == "All" || structure.category == selectedCategory
+            let haystack = [
+                structure.name,
+                structure.category,
+                structure.side?.rawValue ?? ""
+            ].joined(separator: " ")
+            let matchesSearch =
+                searchText.isEmpty ||
+                haystack.localizedCaseInsensitiveContains(searchText)
+            return matchesCategory && matchesSearch
+        }
+    }
+
+    private var groupedStructures: [(category: String, values: [AnatomySelection])] {
+        Dictionary(grouping: filteredStructures, by: \.category)
+            .map { category, values in
+                (
+                    category,
+                    values.sorted {
+                        if $0.name != $1.name {
+                            return $0.name.localizedCaseInsensitiveCompare($1.name)
+                                == .orderedAscending
+                        }
+                        return ($0.side?.rawValue ?? "") < ($1.side?.rawValue ?? "")
+                    }
+                )
+            }
+            .sorted {
+                $0.category.localizedCaseInsensitiveCompare($1.category) == .orderedAscending
+            }
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(categories, id: \.self) { category in
+                            Button(category) {
+                                selectedCategory = category
+                            }
+                            .font(.caption.bold())
+                            .foregroundStyle(
+                                selectedCategory == category
+                                    ? Color.white
+                                    : EidomeTheme.secondaryText
+                            )
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(
+                                selectedCategory == category
+                                    ? EidomeTheme.violet.opacity(0.52)
+                                    : EidomeTheme.panel,
+                                in: Capsule()
+                            )
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                }
+
+                if groupedStructures.isEmpty {
+                    ContentUnavailableView.search(text: searchText)
+                } else {
+                    List {
+                        ForEach(groupedStructures, id: \.category) { group in
+                            Section(group.category) {
+                                ForEach(group.values) { structure in
+                                    Button {
+                                        onSelect(structure)
+                                        dismiss()
+                                    } label: {
+                                        HStack(spacing: 12) {
+                                            Image(systemName: structure == selectedStructure
+                                                  ? "checkmark.circle.fill"
+                                                  : "circle")
+                                                .foregroundStyle(EidomeTheme.cyan)
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text(structure.name)
+                                                    .foregroundStyle(.primary)
+                                                Text(
+                                                    [structure.side?.rawValue, structure.category]
+                                                        .compactMap { $0 }
+                                                        .joined(separator: " · ")
+                                                )
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Section {
+                            Text(
+                                "Names and selection granularity follow the source anatomy mesh. "
+                                + "Some surfaces, including fascia, cover several underlying muscles."
+                            )
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        }
+                    }
+                    .listStyle(.insetGrouped)
+                }
+            }
+            .navigationTitle(layer == .muscles ? "Muscle structures" : "Skeletal structures")
+            .navigationBarTitleDisplayMode(.inline)
+            .searchable(text: $searchText, prompt: "Search structures")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
     }
 }
 

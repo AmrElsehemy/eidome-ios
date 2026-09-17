@@ -144,10 +144,14 @@ struct TwinSceneView: UIViewRepresentable {
     var focusedStructure: AnatomySelection? = nil
     var hiddenStructureIDs: Set<String> = []
     var cameraResetToken: Int = 0
+    var onAnatomyCatalogChanged: (([AnatomySelection]) -> Void)? = nil
     var onStructureSelected: ((AnatomySelection) -> Void)? = nil
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(onStructureSelected: onStructureSelected)
+        Coordinator(
+            onAnatomyCatalogChanged: onAnatomyCatalogChanged,
+            onStructureSelected: onStructureSelected
+        )
     }
 
     func makeUIView(context: Context) -> SCNView {
@@ -171,6 +175,7 @@ struct TwinSceneView: UIViewRepresentable {
             coordinator: context.coordinator,
             cameraState: nil
         )
+        publishAnatomyCatalog(in: view, coordinator: context.coordinator)
         applyAnatomyDisplay(
             in: view,
             selection: focusedStructure,
@@ -185,6 +190,7 @@ struct TwinSceneView: UIViewRepresentable {
     }
 
     func updateUIView(_ view: SCNView, context: Context) {
+        context.coordinator.onAnatomyCatalogChanged = onAnatomyCatalogChanged
         context.coordinator.onStructureSelected = onStructureSelected
         let rebuildsScene =
             context.coordinator.lastProfile != profile ||
@@ -220,6 +226,7 @@ struct TwinSceneView: UIViewRepresentable {
             context.coordinator.lastProfile = profile
             context.coordinator.lastLayer = layer
             context.coordinator.lastCameraResetToken = cameraResetToken
+            publishAnatomyCatalog(in: view, coordinator: context.coordinator)
         }
 
         if rebuildsScene || resetsCamera ||
@@ -248,13 +255,19 @@ struct TwinSceneView: UIViewRepresentable {
             let orthographicScale: Double
         }
 
+        var onAnatomyCatalogChanged: (([AnatomySelection]) -> Void)?
         var onStructureSelected: ((AnatomySelection) -> Void)?
+        var lastAnatomyCatalogIDs: [String] = []
         var cameraStates: [TwinBodyLayer: CameraState] = [:]
         var cachedAnatomyNodes: [
             String: (node: SCNNode, worldTransform: SCNMatrix4)
         ] = [:]
 
-        init(onStructureSelected: ((AnatomySelection) -> Void)?) {
+        init(
+            onAnatomyCatalogChanged: (([AnatomySelection]) -> Void)?,
+            onStructureSelected: ((AnatomySelection) -> Void)?
+        ) {
+            self.onAnatomyCatalogChanged = onAnatomyCatalogChanged
             self.onStructureSelected = onStructureSelected
         }
 
@@ -285,6 +298,36 @@ struct TwinSceneView: UIViewRepresentable {
                 forKey: "eidomeSelectionPulse"
             )
             onStructureSelected?(selection)
+        }
+    }
+
+    private func publishAnatomyCatalog(
+        in view: SCNView,
+        coordinator: Coordinator
+    ) {
+        var uniqueStructures: [String: AnatomySelection] = [:]
+        view.scene?.rootNode.enumerateChildNodes { node, _ in
+            guard let selection = AnatomySelection(node: node) else { return }
+            uniqueStructures[selection.id] = selection
+        }
+
+        let catalog = uniqueStructures.values.sorted {
+            if $0.category != $1.category {
+                return $0.category.localizedCaseInsensitiveCompare($1.category) == .orderedAscending
+            }
+            if $0.name != $1.name {
+                return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+            }
+            return ($0.side?.rawValue ?? "").localizedCaseInsensitiveCompare(
+                $1.side?.rawValue ?? ""
+            ) == .orderedAscending
+        }
+        let catalogIDs = catalog.map(\.id)
+        guard catalogIDs != coordinator.lastAnatomyCatalogIDs else { return }
+        coordinator.lastAnatomyCatalogIDs = catalogIDs
+
+        DispatchQueue.main.async {
+            coordinator.onAnatomyCatalogChanged?(catalog)
         }
     }
 

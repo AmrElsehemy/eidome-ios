@@ -1,4 +1,4 @@
-# Eidome v0.11
+# Eidome v0.12
 
 Eidome is a body-centric digital twin prototype for iPhone and iPad.
 
@@ -13,17 +13,18 @@ Official domain: [eidome.com](https://eidome.com)
 
 Bundle identifier: `ai.knowlly.eidome`
 
-## v0.11 scope
+## v0.12 scope
 
-v0.11 is an explorer-UX release built on the validated v0.10 anatomy focus foundation.
+v0.12 is an anatomy-navigation UX release built on the purpose-led v0.11 explorer.
 
-- Organize the 3D experience around three user intentions: Body, Anatomy and Joints
-- Keep Muscles and Skeleton as clear sublayers within Anatomy
-- Explain what each mode is for before asking the user to interact
-- Connect Body directly to measurements and Joints directly to mobility
-- Keep anatomy identification and isolation tools inside Anatomy
-- Provide an explicit Reset view action while preserving per-layer camera state
-- Make hidden anatomy state visible and reversible
+- Discover every named structure available in the active source layer
+- Search anatomy by structure name, side or tissue category
+- Filter the structure browser by muscle, fascia, tendon, bone and other available categories
+- Select and isolate structures from the browser when precise 3D tapping is difficult
+- Show the number of named source structures available in each layer
+- Explain that selection granularity follows the source mesh
+- Keep fascia peeling and full-layer restoration visible and reversible
+- Preserve the Body → measurements and Joints → mobility product paths
 - Preserve honest measured, derived, estimated and reference labeling
 
 ### Foundation retained from v0.10

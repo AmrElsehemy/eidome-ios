@@ -1,11 +1,29 @@
 import SwiftUI
 
+private enum TwinExplorerMode: String, CaseIterable, Identifiable {
+    case body = "Body"
+    case anatomy = "Anatomy"
+    case joints = "Joints"
+
+    var id: String { rawValue }
+
+    var symbol: String {
+        switch self {
+        case .body: TwinBodyLayer.body.symbol
+        case .anatomy: TwinBodyLayer.muscles.symbol
+        case .joints: TwinBodyLayer.joints.symbol
+        }
+    }
+}
+
 struct TwinHomeView: View {
     @EnvironmentObject private var profileStore: ProfileStore
     @State private var isShowingProfiles = false
     @State private var isShowingDetails = false
     @State private var isRefiningTwin = false
     @State private var selectedLayer: TwinBodyLayer = .body
+    @State private var lastAnatomyLayer: TwinBodyLayer = .muscles
+    @State private var sceneResetToken = 0
     @State private var isEditingMobility = false
     @State private var isShowingSettings = false
     @State private var selectedStructure: AnatomySelection?
@@ -23,8 +41,6 @@ struct TwinHomeView: View {
                         topBar(profile)
                         twinStage(profile)
                         identityCard(profile)
-                        improveCard(profile)
-                        mobilityCard(profile)
                     }
                     .padding(.bottom, 28)
                 }
@@ -105,13 +121,31 @@ struct TwinHomeView: View {
         .padding(.top, 12)
     }
 
+    private var selectedMode: TwinExplorerMode {
+        switch selectedLayer {
+        case .body: .body
+        case .muscles, .skeleton: .anatomy
+        case .joints: .joints
+        }
+    }
+
     private func twinStage(_ profile: TwinProfile) -> some View {
         VStack(spacing: 12) {
+            explorerContextHeader
+
+            modePicker
+
+            if selectedMode == .anatomy {
+                anatomyLayerPicker
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+
             TwinSceneView(
                 profile: profile,
                 layer: selectedLayer,
                 focusedStructure: focusedStructure,
                 hiddenStructureIDs: hiddenStructureIDs,
+                cameraResetToken: sceneResetToken,
                 onStructureSelected: { selection in
                     withAnimation(.easeInOut(duration: 0.2)) {
                         if focusedStructure != selection {
@@ -121,19 +155,35 @@ struct TwinHomeView: View {
                     }
                 }
             )
-                .frame(height: 420)
-                .id(profile.id)
+            .frame(height: 420)
+            .id(profile.id)
 
-            Text(selectedLayer == .muscles || selectedLayer == .skeleton
-                 ? "Tap a structure · Drag to rotate · Pinch to zoom"
-                 : "Drag to rotate · Pinch to zoom")
-                .font(.caption)
-                .foregroundStyle(EidomeTheme.secondaryText)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(EidomeTheme.panel.opacity(0.84), in: Capsule())
+            HStack(spacing: 10) {
+                Text(selectedMode == .anatomy
+                     ? "Tap a structure · Drag to rotate · Pinch to zoom"
+                     : "Drag to rotate · Pinch to zoom")
+                    .font(.caption)
+                    .foregroundStyle(EidomeTheme.secondaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
 
-            layerPicker
+                Spacer(minLength: 4)
+
+                Button {
+                    sceneResetToken += 1
+                } label: {
+                    Label("Reset", systemImage: "arrow.counterclockwise")
+                        .font(.caption.bold())
+                        .foregroundStyle(EidomeTheme.cyan)
+                        .frame(minWidth: 44, minHeight: 44)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Reset 3D view")
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(EidomeTheme.panel.opacity(0.84), in: Capsule())
+            .padding(.horizontal, 20)
 
             Label(selectedLayer.modelNote, systemImage: "circle.dashed")
                 .font(.caption2.weight(.semibold))
@@ -143,56 +193,103 @@ struct TwinHomeView: View {
                 .background(.ultraThinMaterial, in: Capsule())
 
             if !hiddenStructureIDs.isEmpty {
-                Button {
-                    withAnimation(.easeInOut(duration: 0.25)) {
-                        hiddenStructureIDs.removeAll()
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("\(hiddenStructureIDs.count) structure\(hiddenStructureIDs.count == 1 ? "" : "s") hidden")
+                            .font(.caption.bold())
+                        Text("Restore the full layer when you finish looking underneath.")
+                            .font(.caption2)
+                            .foregroundStyle(EidomeTheme.secondaryText)
                     }
-                } label: {
-                    Label("Restore hidden anatomy", systemImage: "arrow.uturn.backward.circle")
-                        .font(.caption.bold())
-                        .foregroundStyle(EidomeTheme.cyan)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(EidomeTheme.panel, in: Capsule())
+                    Spacer()
+                    Button("Restore") {
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            hiddenStructureIDs.removeAll()
+                        }
+                    }
+                    .font(.caption.bold())
+                    .foregroundStyle(EidomeTheme.cyan)
                 }
-                .buttonStyle(.plain)
+                .padding(12)
+                .background(EidomeTheme.panel, in: RoundedRectangle(cornerRadius: 14))
+                .padding(.horizontal, 20)
             }
 
             if let selectedStructure {
                 anatomySelectionCard(selectedStructure)
                     .transition(.move(edge: .top).combined(with: .opacity))
+            } else if selectedMode == .anatomy {
+                anatomyEmptyState
             }
+
+            contextualAction(profile)
+        }
+        .padding(.top, 12)
+    }
+
+    private var explorerContextHeader: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: selectedMode.symbol)
+                .font(.headline)
+                .foregroundStyle(EidomeTheme.cyan)
+                .frame(width: 38, height: 38)
+                .background(EidomeTheme.cyan.opacity(0.11), in: Circle())
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(explorerTitle)
+                    .font(.headline)
+                Text(explorerSubtitle)
+                    .font(.caption)
+                    .foregroundStyle(EidomeTheme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 22)
+    }
+
+    private var explorerTitle: String {
+        switch selectedMode {
+        case .body: "Your body"
+        case .anatomy: "Explore what is underneath"
+        case .joints: "How you move"
         }
     }
 
-    private var layerPicker: some View {
+    private var explorerSubtitle: String {
+        switch selectedMode {
+        case .body:
+            "See how your measurements shape this estimate."
+        case .anatomy:
+            "Inspect reference structures, then connect them to movement."
+        case .joints:
+            "Review estimated joint locations and add your mobility ranges."
+        }
+    }
+
+    private var modePicker: some View {
         HStack(spacing: 6) {
-            ForEach(TwinBodyLayer.allCases) { layer in
+            ForEach(TwinExplorerMode.allCases) { mode in
                 Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        selectedLayer = layer
-                        selectedStructure = nil
-                        focusedStructure = nil
-                        hiddenStructureIDs.removeAll()
-                    }
+                    selectMode(mode)
                 } label: {
                     VStack(spacing: 5) {
-                        Image(systemName: layer.symbol)
+                        Image(systemName: mode.symbol)
                             .font(.body)
-                        Text(layer.rawValue)
+                        Text(mode.rawValue)
                             .font(.caption2.weight(.semibold))
-                            .lineLimit(1)
                     }
-                    .foregroundStyle(selectedLayer == layer ? Color.white : EidomeTheme.secondaryText)
+                    .foregroundStyle(selectedMode == mode ? Color.white : EidomeTheme.secondaryText)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
                     .background(
-                        selectedLayer == layer ? EidomeTheme.violet.opacity(0.32) : Color.clear,
+                        selectedMode == mode ? EidomeTheme.violet.opacity(0.32) : Color.clear,
                         in: RoundedRectangle(cornerRadius: 13, style: .continuous)
                     )
                 }
                 .buttonStyle(.plain)
-                .accessibilityAddTraits(selectedLayer == layer ? .isSelected : [])
+                .accessibilityAddTraits(selectedMode == mode ? .isSelected : [])
             }
         }
         .padding(5)
@@ -202,6 +299,85 @@ struct TwinHomeView: View {
                 .stroke(EidomeTheme.line, lineWidth: 1)
         }
         .padding(.horizontal, 20)
+    }
+
+    private var anatomyLayerPicker: some View {
+        HStack(spacing: 6) {
+            ForEach([TwinBodyLayer.muscles, .skeleton]) { layer in
+                Button {
+                    selectLayer(layer)
+                } label: {
+                    Label(layer.rawValue, systemImage: layer.symbol)
+                        .font(.caption.bold())
+                        .foregroundStyle(selectedLayer == layer ? Color.white : EidomeTheme.secondaryText)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 9)
+                        .background(
+                            selectedLayer == layer ? EidomeTheme.cyan.opacity(0.16) : Color.clear,
+                            in: RoundedRectangle(cornerRadius: 10)
+                        )
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(selectedLayer == layer ? .isSelected : [])
+            }
+        }
+        .padding(4)
+        .background(EidomeTheme.panel.opacity(0.72), in: RoundedRectangle(cornerRadius: 13))
+        .padding(.horizontal, 42)
+    }
+
+    private var anatomyEmptyState: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "hand.tap")
+                .foregroundStyle(EidomeTheme.cyan)
+            Text("Tap a visible structure to identify and isolate it.")
+                .font(.caption)
+                .foregroundStyle(EidomeTheme.secondaryText)
+            Spacer()
+        }
+        .padding(12)
+        .background(EidomeTheme.panel.opacity(0.72), in: RoundedRectangle(cornerRadius: 14))
+        .padding(.horizontal, 20)
+    }
+
+    @ViewBuilder
+    private func contextualAction(_ profile: TwinProfile) -> some View {
+        switch selectedMode {
+        case .body:
+            improveCard(profile)
+        case .anatomy:
+            EmptyView()
+        case .joints:
+            mobilityCard(profile)
+        }
+    }
+
+    private func selectMode(_ mode: TwinExplorerMode) {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            switch mode {
+            case .body:
+                selectedLayer = .body
+            case .anatomy:
+                selectedLayer = lastAnatomyLayer
+            case .joints:
+                selectedLayer = .joints
+            }
+            clearAnatomyInteraction()
+        }
+    }
+
+    private func selectLayer(_ layer: TwinBodyLayer) {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            selectedLayer = layer
+            lastAnatomyLayer = layer
+            clearAnatomyInteraction()
+        }
+    }
+
+    private func clearAnatomyInteraction() {
+        selectedStructure = nil
+        focusedStructure = nil
+        hiddenStructureIDs.removeAll()
     }
 
     private func anatomySelectionCard(_ selection: AnatomySelection) -> some View {

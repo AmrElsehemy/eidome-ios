@@ -12,6 +12,7 @@ fastlane/api_key.json
 .eidome-assets/
 *.blend1
 
+# Local AI and agent tooling
 .agents/
 .blitz/
 .claude/

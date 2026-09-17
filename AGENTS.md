@@ -4,15 +4,19 @@ Eidome is a body-centric athletic digital-twin app. The body is the interface; t
 
 ## Product rule
 
-Every feature must contribute at least one of these: a measurable metric, a model input, an interpretable insight or a coaching action. Do not add generic fitness-dashboard features.
+Eidome helps a person understand their body, why it moves the way it does, and what to improve next. The intended path is: personal data → body model → movement meaning → useful action.
+
+Every feature must contribute at least one of these: a measurable metric, a model input, an interpretable insight or a coaching action. Do not add generic fitness-dashboard features, decorative anatomy, or technical model controls without a clear user purpose.
 
 ## Trust rule
 
 All twin data must remain distinguishable as measured, derived or estimated. Never imply medical accuracy from a parametric body model.
 
-## v0.04 boundary
+## v0.11 boundary
 
-Keep v0.04 focused on interactive anatomical layers, measured mobility and a reusable review-ready foundation. Anatomy is a visual reference with estimated proportions, not a scan of the user's internal structures. HealthKit, accounts, video analysis and cloud infrastructure belong to later versions.
+Keep v0.11 focused on making the existing explorer understandable and purposeful. Body leads to measurements, Anatomy leads to structure inspection, and Joints leads to mobility. Do not add new anatomy assets or imply deeper anatomical precision in this version.
+
+Anatomy remains a visual reference with estimated proportions, not a scan of the user's internal structures. HealthKit, accounts, video analysis and cloud infrastructure belong to later versions.
 
 ## Release rule
 

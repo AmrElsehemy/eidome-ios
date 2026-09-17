@@ -31,7 +31,7 @@ struct WelcomeView: View {
                 Spacer()
 
                 VStack(spacing: 16) {
-                    Text("Your twin starts simple. Every detail you add makes it more you.")
+                    Text("Build your estimated body model. Explore reference anatomy. Record your mobility. Your entries stay on this device.")
                         .font(.subheadline)
                         .foregroundStyle(EidomeTheme.secondaryText)
                         .multilineTextAlignment(.center)

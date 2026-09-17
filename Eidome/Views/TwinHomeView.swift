@@ -7,11 +7,11 @@ private enum TwinExplorerMode: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    var symbol: String {
+var symbol: String {
         switch self {
-        case .body: "figure.stand"
-        case .anatomy: "figure.strengthtraining.traditional"
-        case .joints: "circle.grid.cross"
+        case .body: TwinBodyLayer.body.symbol
+        case .anatomy: TwinBodyLayer.muscles.symbol
+        case .joints: TwinBodyLayer.joints.symbol
         }
     }
 }

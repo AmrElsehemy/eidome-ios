@@ -12,3 +12,10 @@ fastlane/api_key.json
 .eidome-assets/
 *.blend1
 
+.agents/
+.blitz/
+.claude/
+.codex/
+.mcp.json
+CLAUDE.md
+opencode.json

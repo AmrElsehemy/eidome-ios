@@ -501,6 +501,20 @@ struct TwinHomeView: View {
                     : "Dims surrounding anatomy to make this structure easier to inspect."
             )
 
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Understand this selection").font(.caption.bold())
+                Text(anatomyExplanation(selection))
+                    .font(.caption)
+                    .foregroundStyle(EidomeTheme.secondaryText)
+                Text("This reference cannot tell you your muscle strength, tissue health or cause of pain.")
+                    .font(.caption2)
+                    .foregroundStyle(EidomeTheme.secondaryText)
+                Link("Anatomy reference: OpenStax §11.6",
+                     destination: URL(string: "https://openstax.org/books/anatomy-and-physiology-2e/pages/11-6-appendicular-muscles-of-the-pelvic-girdle-and-lower-limbs")!)
+                    .font(.caption2)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
             if selection.category == "Fascia" {
                 Button {
                     withAnimation(.easeInOut(duration: 0.25)) {
@@ -523,6 +537,23 @@ struct TwinHomeView: View {
         .padding(14)
         .glassCard()
         .padding(.horizontal, 20)
+    }
+
+    private func anatomyExplanation(_ selection: AnatomySelection) -> String {
+        let name = selection.name.lowercased()
+        if name.contains("gastrocnemius") {
+            return "A superficial calf muscle with medial and lateral heads. It points the foot downward and helps bend the knee. It is not the whole calf."
+        }
+        if name.contains("soleus") {
+            return "A calf muscle beneath gastrocnemius. It points the foot downward and contributes to standing and walking."
+        }
+        if name.contains("tibialis anterior") {
+            return "A muscle at the front of the lower leg. It lifts the foot toward the shin and turns the sole inward."
+        }
+        if name.contains("crural fascia") {
+            return "A connective-tissue covering of the lower leg, not one calf muscle. Hide this surface to inspect the underlying structures included in this model."
+        }
+        return "The label identifies a source-model structure. A structure-specific explanation is not yet available here. A single selectable surface may cover multiple underlying tissues; this model does not include every depth of anatomy."
     }
 
     private func identityCard(_ profile: TwinProfile) -> some View {
@@ -816,7 +847,7 @@ private struct TwinDetailsView: View {
                         detail("BMI", String(format: "%.1f", profile.bmi))
                     }
                     Section("Model confidence") {
-                        Label("Body geometry is estimated from five profile parameters.", systemImage: "info.circle")
+                        Label("The avatar is estimated from your inputs; it does not measure body composition or internal anatomy. Added measurements refine proportions, not medical accuracy.", systemImage: "info.circle")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }

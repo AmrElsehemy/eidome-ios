@@ -209,6 +209,8 @@ struct TwinHomeView: View {
                 .padding(.vertical, 6)
                 .background(.ultraThinMaterial, in: Capsule())
 
+            whyThisMattersCard(profile)
+
             if selectedMode == .anatomy {
                 anatomyBrowseCard
             }
@@ -399,6 +401,119 @@ struct TwinHomeView: View {
         .padding(.horizontal, 20)
     }
 
+    private func whyThisMattersCard(_ profile: TwinProfile) -> some View {
+        let meaning = explorerMeaning(for: profile)
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                Image(systemName: "lightbulb.max")
+                    .font(.headline)
+                    .foregroundStyle(EidomeTheme.cyan)
+                    .frame(width: 36, height: 36)
+                    .background(EidomeTheme.cyan.opacity(0.10), in: Circle())
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Why this matters")
+                        .font(.subheadline.bold())
+                    Text(meaning.summary)
+                        .font(.caption)
+                        .foregroundStyle(EidomeTheme.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            meaningRow(
+                symbol: "checkmark.circle",
+                title: "Use it for",
+                text: meaning.use
+            )
+
+            meaningRow(
+                symbol: "exclamationmark.shield",
+                title: "Keep in mind",
+                text: meaning.limit
+            )
+
+            Label(meaning.nextStep, systemImage: "arrow.right.circle.fill")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(EidomeTheme.cyan)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityLabel("Next useful step: \(meaning.nextStep)")
+        }
+        .padding(14)
+        .background(EidomeTheme.panel.opacity(0.82), in: RoundedRectangle(cornerRadius: 16))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(EidomeTheme.cyan.opacity(0.16), lineWidth: 1)
+        }
+        .padding(.horizontal, 20)
+    }
+
+    private func meaningRow(
+        symbol: String,
+        title: String,
+        text: String
+    ) -> some View {
+        HStack(alignment: .top, spacing: 9) {
+            Image(systemName: symbol)
+                .font(.caption)
+                .foregroundStyle(EidomeTheme.secondaryText)
+                .frame(width: 18, alignment: .center)
+                .accessibilityHidden(true)
+
+            Text(title + ":")
+                .font(.caption.bold())
+
+            Text(text)
+                .font(.caption)
+                .foregroundStyle(EidomeTheme.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func explorerMeaning(
+        for profile: TwinProfile
+    ) -> (summary: String, use: String, limit: String, nextStep: String) {
+        switch selectedMode {
+        case .body:
+            let count = profile.bodyMeasurements?.completedCount ?? 0
+            return (
+                "Your body view turns the information you enter into a visual estimate you can refine over time.",
+                "Understanding which proportions are measured and which are still estimated.",
+                "It is not a body scan and does not measure body composition or tissue health.",
+                count == 7
+                    ? "Your seven regional measurements are entered; update them when your body changes."
+                    : "Add \(7 - count) more regional measurement\(7 - count == 1 ? "" : "s") to replace broad shape estimates."
+            )
+        case .anatomy:
+            if let selectedStructure {
+                return (
+                    "Anatomy gives the body estimate useful context by naming the structures underneath.",
+                    "Learning where \(selectedStructure.name) sits and connecting it to movement.",
+                    "Reference anatomy is height-scaled; it does not measure your own muscle size, strength, injury or pain.",
+                    "Read the selected structure card, then rotate or isolate it to understand its relationships."
+                )
+            }
+            return (
+                "Anatomy gives the body estimate useful context by naming the structures underneath.",
+                "Building a spatial map of muscles, fascia and bones before analysing movement.",
+                "These are reference structures, not a scan or diagnosis of your body.",
+                "Tap a visible structure or use Browse structures to start with a specific question."
+            )
+        case .joints:
+            let count = profile.mobilityProfile?.completedCount ?? 0
+            return (
+                "Joints connect anatomy to what your body can actually do.",
+                "Recording movement ranges so later coaching can use your own mobility context.",
+                "The markers are estimated positions and entered ranges are not a clinical assessment.",
+                count == 8
+                    ? "Your eight mobility fields are entered; repeat them consistently to compare change."
+                    : "Measure \(8 - count) more joint range\(8 - count == 1 ? "" : "s") to build your mobility baseline."
+            )
+        }
+    }
+
+
     @ViewBuilder
     private func contextualAction(_ profile: TwinProfile) -> some View {
         switch selectedMode {
@@ -560,11 +675,11 @@ struct TwinHomeView: View {
         VStack(spacing: 18) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("DIGITAL TWIN")
+                    Text("TWIN INPUT COVERAGE")
                         .font(.caption.bold())
                         .tracking(1.2)
                         .foregroundStyle(EidomeTheme.secondaryText)
-                    Text("\(profile.completeness)% complete")
+                    Text("\(profile.completeness)% captured")
                         .font(.title2.bold())
                 }
                 Spacer()
@@ -581,6 +696,11 @@ struct TwinHomeView: View {
                 divider
                 stat("AGE", "\(profile.age)")
             }
+
+            Text("Coverage reflects information you entered, not anatomical or medical confidence.")
+                .font(.caption2)
+                .foregroundStyle(EidomeTheme.secondaryText)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
             Button("View model details") { isShowingDetails = true }
                 .font(.subheadline.bold())

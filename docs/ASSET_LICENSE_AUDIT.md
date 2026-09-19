@@ -1,43 +1,73 @@
-# Asset evidence audit — 2026-09-17
+# Asset evidence audit — 2026-09-19
 
-Status: source-document audit complete; distribution clearance remains open.
-No replacement is justified solely by the evidence collected here. No models were removed.
+Status: attribution, modification notice, ShareAlike labelling, and an
+unrestricted export path are implemented. Source-provenance uncertainty is
+narrowed and recorded below; this document is not legal advice.
 
-## Verified evidence
+## Implemented distribution controls
+
+1. In-app acknowledgements now contain the requested Z-Anatomy and BodyParts3D
+   credits, exact licence links, source revision, and Eidome modification notice.
+2. Eidome explicitly offers the bundled anatomy derivative under CC BY-SA 4.0.
+3. The acknowledgements screen exports the exact bundled USDZ plus a plain-text
+   licence and attribution notice using the iOS share sheet. This provides a
+   copy path independent of App Store delivery controls.
+4. Avatar credits identify the MakeHuman/MPFB core asset licence, MargaretToigo
+   skin, and Elvaerwyn clothing.
+5. CI validates that the acknowledgement and export language remain present.
+
+## Evidence
 
 | Component | Evidence | Finding |
 | --- | --- | --- |
-| MPFB core base mesh and targets | https://static.makehumancommunity.org/mpfb/faq/can_i_sell_models.html | Core assets declared CC0; generator code license is separate. Match exact installed inputs before signing off the bundled binary. |
-| toigo_light_skin_male_bronze | https://static.makehumancommunity.org/assets/assetpacks/skins02.html | MargaretToigo; CC0. No replacement indicated. |
-| elvs_male_swim_shorts1 | https://static.makehumancommunity.org/assets/assetpacks/pants03.html | Elvaerwyn; CC-BY. License version is not specified in the pack table. Exact asset page https://www.makehumancommunity.org/node/1321 returned 502 during audit. Retain attribution; obtain packaged license/version. |
-| high-poly eyes | Recorded generation logs | Exact installed asset metadata and dependent textures not inspected. Do not mark verified solely from its name. |
-| Z-Anatomy export | Committed z-anatomy-v0.08.json | 277 skeletal + 120 muscle/fascia source names checked. Names alone do not establish individual geometry provenance. |
+| MPFB core body/system assets | https://static.makehumancommunity.org/about/license.html | MakeHuman Community states all core assets are CC0. |
+| MPFB high-poly eyes | MPFB source labels high-poly eyes as coming from the system asset pack | Treated as a core/system asset under the published CC0 statement. |
+| `toigo_light_skin_male_bronze` | https://static.makehumancommunity.org/assets/assetpacks/skins02.html | MargaretToigo; CC0. |
+| `elvs_male_swim_shorts1` | https://static.makehumancommunity.org/assets/assetpacks/pants03.html | Elvaerwyn; catalogue label “CC-BY”. The catalogue does not identify a version. |
+| Z-Anatomy export | `docs/asset-manifests/z-anatomy-v0.08.json` | 277 skeletal and 120 muscle/fascia source names recorded. |
+| Z-Anatomy licence | pinned `License.txt` below | Project declaration and required attribution are CC BY-SA 4.0; BodyParts3D is credited CC BY-SA 2.1 Japan. |
 
-## Z-Anatomy scope
-
-Pinned upstream license:
+Pinned Z-Anatomy notice:
 https://github.com/Z-Anatomy/Models-of-human-anatomy/blob/b9c9f98066e1e786814603b047c5bd3638c2a864/License.txt
 
-The repository declares CC BY-SA 4.0 and credits BodyParts3D under CC BY-SA 2.1 Japan.
-Its separately named non-commercial contributions are Anatomy of the Inner Ear (University of Dundee School of Medicine, CC BY-NC-SA 4.0) and Kidney (Lissie Cowley, CC BY-NC 4.0).
-Cranial Nerves and Foramina is credited to University of Dundee, CAHID, CC BY 4.0.
-Brainder and White matter credits University of Washington without an explicit license in that list.
+Known Eidome modifications: selecting the skeletal and superficial-muscle
+layers, removing guide geometry, decimating meshes, normalizing scale/frame,
+and converting to USDZ.
 
-No exported names match kidney, cochlea, vestibular, semicircular, white matter, brain or cranial nerve terms. This is a name-screening result, NOT proof that adapted geometry is absent.
-The skeleton does contain left/right incus, malleus, stapes and temporal bones. Do not delete these based only on their proximity to the ear, or presume that their provenance matches a differently named upstream contribution.
+## Restricted upstream contributions screen
 
-No per-object license mapping was found in the pinned repository's text-file inventory. The binary source scene and exact installed avatar asset headers remain necessary evidence.
+The pinned Z-Anatomy notice separately identifies:
 
-## Exact closure requirements
+- Anatomy of the Inner Ear — University of Dundee School of Medicine —
+  CC BY-NC-SA 4.0.
+- Kidney — Lissie Cowley — CC BY-NC 4.0.
+- Cranial Nerves and Foramina — University of Dundee, CAHID — CC BY 4.0.
+- Brainder and White matter — University of Washington — no explicit licence
+  stated in that notice.
 
-1. Inspect the source scene's provenance/custom properties or obtain upstream confirmation that the 397 exported objects exclude the separately credited restricted contributions. If any overlap is confirmed, address only those objects.
-2. Capture the installed shorts license/version, high-poly eye mesh and texture notices, and any pose/proxy actually baked into the final avatar. Match them to the bundled USDZ rather than to the latest available generator.
-3. Supply full applicable credits, source/license links and modification notices in the distributed acknowledgements. Credits include BodyParts3D — The Database Center for Life Science; Z-Anatomy; Elvaerwyn.
-4. Review ShareAlike and downstream distribution terms for the anatomy derivative, including App Store restrictions. Documentation alone does not resolve this. CC BY-SA 4.0 reference: https://creativecommons.org/licenses/by-sa/4.0/
-5. Archive the evidence with the release artifact and record its hash. Do not label the release cleared before these items are satisfied.
+No exported manifest name matches kidney, cochlea, vestibular, semicircular,
+white matter, brain, or cranial nerve terms. The skeleton contains incus,
+malleus, stapes, and temporal-bone entries; those are not proof of provenance
+from the separately named inner-ear contribution. The upstream repository
+does not provide a per-object licence map in its text inventory.
 
-Known export modifications: selecting the skeletal and superficial-muscle layers, removing guide geometry, decimating meshes, normalizing scale/frame and converting to USDZ. Verify any subsequent modifications against the final export.
+## Honest residual risk
+
+- The name screen is not a per-vertex provenance proof. Upstream confirmation
+  or inspection of the source scene's provenance metadata would strengthen it.
+- The clothing catalogue says “CC-BY” without a version. Attribution is
+  preserved, but the publisher should retain any licence file packaged with the
+  installed asset if one is available.
+- A lawyer should review the final App Store contractual setup if commercial
+  risk tolerance requires an opinion. The implemented export path, attribution,
+  same-licence declaration, and modification notice address the concrete
+  technical distribution duties identified in the source licences.
 
 ## Decision
 
-Keep the current assets in development. Do not commission or buy replacements based on a blanket claim that Z-Anatomy is non-commercial. Do not submit this audit as proof of App Store clearance. The remaining work is narrowly scoped provenance and distribution compliance, not an established need to replace the avatar or entire anatomy atlas.
+The repository now contains and ships the compliance material that can be
+implemented in software: credits, source and licence links, modification
+notice, ShareAlike declaration, and exportable model-plus-notice package. No
+blanket claim that all Z-Anatomy content is non-commercial is supported. The
+remaining issue is upstream provenance certainty, not missing in-app
+attribution work.

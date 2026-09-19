@@ -7,6 +7,8 @@ PROJECT="Eidome.xcodeproj/project.pbxproj"
 HUMAN_MODEL="Eidome/Resources/Models/eidome-human.usdz"
 ANATOMY_MODEL="Eidome/Resources/Models/eidome-anatomy.usdz"
 ANATOMY_MANIFEST="docs/asset-manifests/z-anatomy-v0.08.json"
+ACKNOWLEDGEMENTS="Eidome/Views/AppSettingsView.swift"
+THIRD_PARTY_NOTICE="THIRD_PARTY_ASSETS.md"
 
 test -s "$ICON"
 test -s "$MANIFEST"
@@ -33,6 +35,11 @@ ruby -rjson -e '
   abort "Skeleton manifest is incomplete" unless manifest.dig("layers", "skeleton", "exportedObjects").to_i >= 277
   abort "Muscle manifest is incomplete" unless manifest.dig("layers", "muscles", "exportedObjects").to_i >= 120
 ' "$ANATOMY_MANIFEST"
+grep -q 'CC BY-SA 4.0' "$ACKNOWLEDGEMENTS"
+grep -q 'Export model and licence notice' "$ACKNOWLEDGEMENTS"
+grep -q 'makeAnatomyExportItems' "$ACKNOWLEDGEMENTS"
+grep -q 'Eidome modifications' "$THIRD_PARTY_NOTICE"
+grep -q 'unrestricted copy path' "$THIRD_PARTY_NOTICE"
 ruby -c fastlane/Fastfile
 
 required_metadata=(

@@ -199,8 +199,6 @@ struct AnatomySelection: Identifiable, Equatable {
             return "Joint landmark"
         case .body:
             return "Body measurement"
-        default:
-            return "Anatomical structure"
         }
     }
 

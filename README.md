@@ -1,4 +1,4 @@
-# Eidome v0.15
+# Eidome v0.16
 
 Eidome is a body-centric digital twin prototype for iPhone and iPad.
 
@@ -13,20 +13,20 @@ Official domain: [eidome.com](https://eidome.com)
 
 Bundle identifier: `ai.knowlly.eidome`
 
-App Store version: `1.0` · Build: `15` · Internal milestone: `v0.15`
+App Store version: `1.0` · Build: `16` · Internal milestone: `v0.16`
 
-## v0.15 scope
+## v0.16 scope
 
-v0.15 turns the explorer into a persistent per-profile workspace and prepares a clarified App Store resubmission.
+v0.16 replaces the mannequin-style joint view with an interactive joint explorer grounded on the reference skeleton.
 
-- Remember rotation, camera target and zoom independently for Body, Muscles, Skeleton and Joints
-- Restore each safe view after layer changes, navigation, backgrounding and relaunch
-- Keep saved views isolated by profile
-- Reject corrupt or unsafe persisted camera values
-- Provide an explicit accessible Reset view action
-- Remove saved views when a profile or all local data is deleted
-- Preserve the searchable anatomy, education, licensing and why-first UX completed in v0.12–v0.14
-- Include complete App Review notes for the Guideline 2.1 information request
+- Show twelve named bilateral shoulder, elbow, wrist, hip, knee and ankle landmarks
+- Place landmarks over the bundled reference skeleton instead of a mannequin
+- Select landmarks by tapping the model or searching the joint browser
+- Explain supported movement in plain language
+- Show entered ankle, hip and shoulder mobility values with side and provenance
+- Link every selected joint directly to mobility entry
+- Keep joint positions clearly labeled as estimated rather than measured
+- Preserve independent, persistent camera state for every profile and layer
 
 ### Foundation retained from v0.10
 

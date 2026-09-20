@@ -13,6 +13,8 @@ Official domain: [eidome.com](https://eidome.com)
 
 Bundle identifier: `ai.knowlly.eidome`
 
+App Store version: `1.0` · Build: `15` · Internal milestone: `v0.15`
+
 ## v0.15 scope
 
 v0.15 turns the explorer into a persistent per-profile workspace and prepares a clarified App Store resubmission.

@@ -1,4 +1,4 @@
-# Eidome v0.17
+# Eidome v0.18
 
 Eidome is a body-centric digital twin prototype for iPhone and iPad.
 
@@ -13,20 +13,19 @@ Official domain: [eidome.com](https://eidome.com)
 
 Bundle identifier: `ai.knowlly.eidome`
 
-App Store version: `1.0` · Build: `17` · Internal milestone: `v0.17`
+App Store version: `1.0` · Build: `18` · Internal milestone: `v0.18`
 
-## v0.17 scope
+## v0.18 scope
 
-v0.17 turns Body mode into a useful map of the inputs shaping the exterior twin.
+v0.18 turns anatomy selection into a cited learning experience rather than a label viewer.
 
-- Show seven selectable markers for shoulder, chest, waist, hip, inseam, thigh and calf inputs
-- Select markers directly or through a searchable measurement browser
-- Show the latest entered value, provenance and recording date when available
-- State when older saved values have no recorded date
-- Explain how each measurement changes the exterior estimate
-- Distinguish entered measurements from regions still estimated by the model
-- Recommend the next useful missing body measurement
-- Preserve backward compatibility with existing locally saved profiles
+- Provide 55 curated structure-specific knowledge entries across muscle and skeleton layers
+- Explain each covered structure's region, primary function and movement relevance
+- Link every curated card to a relevant OpenStax Anatomy & Physiology 2e section
+- Keep an explicit general-reference fallback for structures not yet curated
+- Avoid injury, diagnosis and personalized tissue claims
+- Validate the minimum education catalog size in CI
+- Preserve searchable selection, layer isolation and deeper-structure reveal
 
 ### Foundation retained from v0.10
 

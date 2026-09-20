@@ -1,5 +1,114 @@
 import SwiftUI
 
+private struct AnatomyKnowledgeEntry {
+    enum Source {
+        case upperMuscle, lowerMuscle, headMuscle, upperBone, lowerBone, axialBone
+
+        var title: String {
+            switch self {
+            case .upperMuscle: "OpenStax A&P 2e §11.5"
+            case .lowerMuscle: "OpenStax A&P 2e §11.6"
+            case .headMuscle: "OpenStax A&P 2e §11.3"
+            case .upperBone: "OpenStax A&P 2e §8.2"
+            case .lowerBone: "OpenStax A&P 2e §8.4"
+            case .axialBone: "OpenStax A&P 2e, Axial Skeleton"
+            }
+        }
+
+        var url: URL {
+            let path: String
+            switch self {
+            case .upperMuscle:
+                path = "11-5-muscles-of-the-pectoral-girdle-and-upper-limbs"
+            case .lowerMuscle:
+                path = "11-6-appendicular-muscles-of-the-pelvic-girdle-and-lower-limbs"
+            case .headMuscle:
+                path = "11-3-axial-muscles-of-the-head-neck-and-back"
+            case .upperBone:
+                path = "8-2-bones-of-the-upper-limb"
+            case .lowerBone:
+                path = "8-4-bones-of-the-lower-limb"
+            case .axialBone:
+                path = "7-1-divisions-of-the-skeletal-system"
+            }
+            return URL(string: "https://openstax.org/books/anatomy-and-physiology-2e/pages/\(path)")!
+        }
+    }
+
+    let pattern: String
+    let region: String
+    let function: String
+    let movement: String
+    let source: Source
+}
+
+private enum AnatomyKnowledge {
+    // Specific names precede broader terms so multipart source meshes resolve
+    // to the most precise supported explanation.
+    static let entries: [AnatomyKnowledgeEntry] = [
+        .init(pattern: "acromial part of deltoid", region: "Outer shoulder", function: "Raises the arm away from the body.", movement: "Shoulder abduction", source: .upperMuscle),
+        .init(pattern: "clavicular part of deltoid", region: "Front of shoulder", function: "Assists raising the arm forward and turning it inward.", movement: "Shoulder flexion and medial rotation", source: .upperMuscle),
+        .init(pattern: "scapular spinal part of deltoid", region: "Back of shoulder", function: "Assists moving the arm backward and turning it outward.", movement: "Shoulder extension and lateral rotation", source: .upperMuscle),
+        .init(pattern: "descending part of trapezius", region: "Upper back and neck", function: "Assists elevating and upwardly rotating the shoulder blade.", movement: "Scapular elevation and upward rotation", source: .upperMuscle),
+        .init(pattern: "transverse part of trapezius", region: "Upper back", function: "Draws the shoulder blade toward the spine.", movement: "Scapular retraction", source: .upperMuscle),
+        .init(pattern: "ascending part of trapezius", region: "Lower trapezius", function: "Assists lowering and upwardly rotating the shoulder blade.", movement: "Scapular depression and upward rotation", source: .upperMuscle),
+        .init(pattern: "brachioradialis", region: "Lateral forearm", function: "Bends the elbow, especially with the thumb facing upward.", movement: "Elbow flexion", source: .upperMuscle),
+        .init(pattern: "clavicular head of pectoralis major", region: "Upper chest", function: "Assists bringing the arm forward and across the body.", movement: "Shoulder flexion and adduction", source: .upperMuscle),
+        .init(pattern: "sternocostal head of pectoralis major", region: "Chest", function: "Pulls the upper arm toward and across the trunk.", movement: "Shoulder adduction and medial rotation", source: .upperMuscle),
+        .init(pattern: "extensor carpi radialis longus", region: "Posterior-lateral forearm", function: "Extends the wrist and moves it toward the thumb side.", movement: "Wrist extension and radial deviation", source: .upperMuscle),
+        .init(pattern: "extensor digitorum", region: "Posterior forearm", function: "Straightens fingers two through five and assists wrist extension.", movement: "Finger and wrist extension", source: .upperMuscle),
+        .init(pattern: "external abdominal oblique", region: "Lateral abdomen", function: "Compresses the abdomen and assists trunk bending and rotation.", movement: "Trunk flexion, lateral flexion and rotation", source: .headMuscle),
+        .init(pattern: "fibularis longus", region: "Lateral lower leg", function: "Turns the sole outward and assists pointing the foot downward.", movement: "Foot eversion and plantar flexion", source: .lowerMuscle),
+        .init(pattern: "gluteus maximus", region: "Posterior hip", function: "Extends and turns the thigh outward at the hip.", movement: "Hip extension and lateral rotation", source: .lowerMuscle),
+        .init(pattern: "humeral head of flexor carpi ulnaris", region: "Medial forearm", function: "Contributes to bending the wrist and moving it toward the little-finger side.", movement: "Wrist flexion and ulnar deviation", source: .upperMuscle),
+        .init(pattern: "ulnar head of flexor carpi ulnaris", region: "Medial forearm", function: "Works with the humeral head to bend and ulnarly deviate the wrist.", movement: "Wrist flexion and ulnar deviation", source: .upperMuscle),
+        .init(pattern: "lateral head of gastrocnemius", region: "Outer posterior calf", function: "Assists pointing the foot downward and bending the knee.", movement: "Ankle plantar flexion and knee flexion", source: .lowerMuscle),
+        .init(pattern: "medial head of gastrocnemius", region: "Inner posterior calf", function: "Assists pointing the foot downward and bending the knee.", movement: "Ankle plantar flexion and knee flexion", source: .lowerMuscle),
+        .init(pattern: "lateral head of triceps brachii", region: "Posterior upper arm", function: "Straightens the elbow.", movement: "Elbow extension", source: .upperMuscle),
+        .init(pattern: "long head of triceps brachii", region: "Posterior upper arm", function: "Straightens the elbow and also assists moving the arm backward.", movement: "Elbow extension and shoulder extension", source: .upperMuscle),
+        .init(pattern: "latissimus dorsi", region: "Mid and lower back", function: "Pulls the upper arm down, back and inward.", movement: "Shoulder extension, adduction and medial rotation", source: .upperMuscle),
+        .init(pattern: "long head of biceps brachii", region: "Anterior upper arm", function: "Assists bending the elbow and turning the palm upward.", movement: "Elbow flexion and forearm supination", source: .upperMuscle),
+        .init(pattern: "short head of biceps brachii", region: "Anterior upper arm", function: "Assists bending the elbow and turning the palm upward.", movement: "Elbow flexion and forearm supination", source: .upperMuscle),
+        .init(pattern: "long head of biceps femoris", region: "Posterior thigh", function: "Bends the knee and assists extending the hip.", movement: "Knee flexion and hip extension", source: .lowerMuscle),
+        .init(pattern: "rectus femoris", region: "Anterior thigh", function: "Straightens the knee and assists raising the thigh forward.", movement: "Knee extension and hip flexion", source: .lowerMuscle),
+        .init(pattern: "sartorius", region: "Diagonal anterior thigh", function: "Assists hip flexion, abduction and outward rotation while bending the knee.", movement: "Combined hip motion and knee flexion", source: .lowerMuscle),
+        .init(pattern: "semitendinosus", region: "Posterior thigh", function: "Bends the knee and extends the hip.", movement: "Knee flexion and hip extension", source: .lowerMuscle),
+        .init(pattern: "tibialis anterior", region: "Front of lower leg", function: "Lifts the foot toward the shin and turns the sole inward.", movement: "Ankle dorsiflexion and foot inversion", source: .lowerMuscle),
+        .init(pattern: "vastus lateralis", region: "Outer anterior thigh", function: "Straightens the knee as part of the quadriceps group.", movement: "Knee extension", source: .lowerMuscle),
+        .init(pattern: "vastus medialis", region: "Inner anterior thigh", function: "Straightens the knee as part of the quadriceps group.", movement: "Knee extension", source: .lowerMuscle),
+        .init(pattern: "clavicle", region: "Front of shoulder girdle", function: "Braces the shoulder away from the trunk and transfers upper-limb force to the axial skeleton.", movement: "Moves with the shoulder girdle", source: .upperBone),
+        .init(pattern: "scapula", region: "Posterior shoulder girdle", function: "Provides the socket for the upper arm and broad attachment for shoulder muscles.", movement: "Rotates, elevates, depresses and glides with arm movement", source: .upperBone),
+        .init(pattern: "humerus", region: "Upper arm", function: "Connects the shoulder to the elbow and provides leverage for arm muscles.", movement: "Participates in shoulder and elbow motion", source: .upperBone),
+        .init(pattern: "radius", region: "Thumb-side forearm", function: "Rotates around the ulna and carries much of the hand's load at the wrist.", movement: "Forearm pronation and supination; wrist motion", source: .upperBone),
+        .init(pattern: "ulna", region: "Little-finger-side forearm", function: "Forms the main hinge relationship with the humerus at the elbow.", movement: "Elbow flexion and extension", source: .upperBone),
+        .init(pattern: "femur", region: "Thigh", function: "Transfers load between hip and knee and provides leverage for powerful lower-limb muscles.", movement: "Participates in hip and knee motion", source: .lowerBone),
+        .init(pattern: "patella", region: "Front of knee", function: "Protects the anterior knee and improves the quadriceps' leverage.", movement: "Glides during knee flexion and extension", source: .lowerBone),
+        .init(pattern: "tibia", region: "Medial lower leg", function: "Carries most body weight from the knee to the ankle.", movement: "Participates in knee and ankle motion", source: .lowerBone),
+        .init(pattern: "fibula", region: "Lateral lower leg", function: "Stabilizes the ankle region and provides muscle attachment with limited weight bearing.", movement: "Supports ankle mechanics", source: .lowerBone),
+        .init(pattern: "hip bone", region: "Pelvic girdle", function: "Forms the hip socket and transfers load between trunk and lower limb.", movement: "Provides the stable base for hip motion", source: .lowerBone),
+        .init(pattern: "sacrum", region: "Base of spine", function: "Links the vertebral column with the pelvic girdle.", movement: "Transfers trunk load into the pelvis", source: .axialBone),
+        .init(pattern: "calcaneus", region: "Heel", function: "Forms the heel and provides a lever for the calcaneal tendon.", movement: "Supports ankle plantar flexion and weight bearing", source: .lowerBone),
+        .init(pattern: "talus", region: "Upper rear foot", function: "Receives lower-leg load and forms key ankle and hindfoot joints.", movement: "Participates in ankle dorsiflexion and plantar flexion", source: .lowerBone),
+        .init(pattern: "navicular bone", region: "Medial midfoot", function: "Links the talus with the forefoot and contributes to the medial arch.", movement: "Supports adaptable foot motion", source: .lowerBone),
+        .init(pattern: "cuboid bone", region: "Lateral midfoot", function: "Links the heel region with the lateral forefoot and supports the lateral arch.", movement: "Supports adaptable foot motion", source: .lowerBone),
+        .init(pattern: "frontal bone", region: "Forehead and anterior skull", function: "Protects the front of the brain and contributes to the eye sockets.", movement: "Structural; joined mainly by immovable sutures", source: .axialBone),
+        .init(pattern: "parietal bone", region: "Upper sides of skull", function: "Forms much of the cranial roof and protects the brain.", movement: "Structural; joined by skull sutures", source: .axialBone),
+        .init(pattern: "temporal bone", region: "Side and base of skull", function: "Protects structures of the ear and participates in the jaw joint.", movement: "Provides the skull side of jaw articulation", source: .axialBone),
+        .init(pattern: "occipital bone", region: "Back and base of skull", function: "Surrounds the spinal opening and articulates with the first cervical vertebra.", movement: "Supports head nodding at the upper neck", source: .axialBone),
+        .init(pattern: "mandible", region: "Lower jaw", function: "Holds the lower teeth and is the skull's major freely movable bone.", movement: "Jaw elevation, depression and side-to-side motion", source: .axialBone),
+        .init(pattern: "maxilla", region: "Upper jaw and central face", function: "Holds the upper teeth and contributes to the nose, palate and eye sockets.", movement: "Structural support for the face", source: .axialBone),
+        .init(pattern: "atlas (c1)", region: "First cervical vertebra", function: "Supports the skull at the top of the spine.", movement: "Primarily supports head nodding", source: .axialBone),
+        .init(pattern: "axis (c2)", region: "Second cervical vertebra", function: "Provides the pivot around which the atlas and head rotate.", movement: "Head and upper-neck rotation", source: .axialBone),
+        .init(pattern: "body of sternum", region: "Front of chest", function: "Anchors rib cartilages and helps protect thoracic organs.", movement: "Moves subtly with breathing", source: .axialBone),
+        .init(pattern: "manubrium", region: "Upper sternum", function: "Connects with the clavicles and upper ribs.", movement: "Supports the shoulder girdle and rib cage", source: .axialBone)
+    ]
+
+    static func entry(for selection: AnatomySelection) -> AnatomyKnowledgeEntry? {
+        let normalized = selection.name.lowercased()
+        return entries.first { normalized.contains($0.pattern) }
+    }
+}
+
 private enum TwinExplorerMode: String, CaseIterable, Identifiable {
     case body = "Body"
     case anatomy = "Anatomy"
@@ -785,15 +894,23 @@ struct TwinHomeView: View {
             } else {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Understand this selection").font(.caption.bold())
-                    Text(anatomyExplanation(selection))
-                        .font(.caption)
-                        .foregroundStyle(EidomeTheme.secondaryText)
+                    if let knowledge = AnatomyKnowledge.entry(for: selection) {
+                        knowledgeRow("Region", knowledge.region)
+                        knowledgeRow("Function", knowledge.function)
+                        knowledgeRow("Movement", knowledge.movement)
+                        Link(knowledge.source.title, destination: knowledge.source.url)
+                            .font(.caption2.weight(.semibold))
+                    } else {
+                        Text(anatomyExplanation(selection))
+                            .font(.caption)
+                            .foregroundStyle(EidomeTheme.secondaryText)
+                        Link("General anatomy reference: OpenStax A&P 2e",
+                             destination: URL(string: "https://openstax.org/books/anatomy-and-physiology-2e/pages/11-introduction")!)
+                            .font(.caption2.weight(.semibold))
+                    }
                     Text("This reference cannot tell you your muscle strength, tissue health or cause of pain.")
                         .font(.caption2)
                         .foregroundStyle(EidomeTheme.secondaryText)
-                    Link("Anatomy reference: OpenStax §11.6",
-                         destination: URL(string: "https://openstax.org/books/anatomy-and-physiology-2e/pages/11-6-appendicular-muscles-of-the-pelvic-girdle-and-lower-limbs")!)
-                        .font(.caption2)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -820,6 +937,18 @@ struct TwinHomeView: View {
         .padding(14)
         .glassCard()
         .padding(.horizontal, 20)
+    }
+
+    private func knowledgeRow(_ label: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label.uppercased())
+                .font(.caption2.bold())
+                .tracking(0.6)
+                .foregroundStyle(EidomeTheme.cyan)
+            Text(value)
+                .font(.caption)
+                .foregroundStyle(EidomeTheme.secondaryText)
+        }
     }
 
     @ViewBuilder
@@ -926,7 +1055,7 @@ struct TwinHomeView: View {
         if name.contains("crural fascia") {
             return "A connective-tissue covering of the lower leg, not one calf muscle. Hide this surface to inspect the underlying structures included in this model."
         }
-        return "The label identifies a source-model structure. A structure-specific explanation is not yet available here. A single selectable surface may cover multiple underlying tissues; this model does not include every depth of anatomy."
+        return "This source-model label does not yet have a structure-specific explanation. A single selectable surface may cover multiple underlying tissues; this model does not include every depth of anatomy."
     }
 
     private func identityCard(_ profile: TwinProfile) -> some View {

@@ -27,7 +27,7 @@ fi
 grep -Eq '"filename"[[:space:]]*:[[:space:]]*"AppIcon\.png"' Eidome/Assets.xcassets/AppIcon.appiconset/Contents.json
 grep -q 'NSPrivacyAccessedAPICategoryUserDefaults' "$MANIFEST"
 test "$(grep -Fc 'MARKETING_VERSION = 1.0;' "$PROJECT")" -eq 2
-test "$(grep -c 'CURRENT_PROJECT_VERSION = 16;' "$PROJECT")" -eq 2
+test "$(grep -c 'CURRENT_PROJECT_VERSION = 17;' "$PROJECT")" -eq 2
 test "$(grep -c 'eidome-anatomy.usdz in Resources' "$PROJECT")" -eq 2
 ruby -rjson -e '
   manifest = JSON.parse(File.read(ARGV.fetch(0)))

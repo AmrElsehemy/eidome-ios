@@ -197,6 +197,8 @@ struct AnatomySelection: Identifiable, Equatable {
             return "Bone"
         case .joints:
             return "Joint landmark"
+        case .body:
+            return "Body measurement"
         default:
             return "Anatomical structure"
         }
@@ -227,6 +229,9 @@ struct AnatomySelection: Identifiable, Equatable {
         } else if nodeName.hasPrefix("EidomeJoint_") {
             prefix = "EidomeJoint_"
             layer = .joints
+        } else if nodeName.hasPrefix("EidomeBody_") {
+            prefix = "EidomeBody_"
+            layer = .body
         } else {
             return nil
         }
@@ -607,7 +612,7 @@ struct TwinSceneView: UIViewRepresentable {
     ) -> SCNNode {
         switch layer {
         case .body:
-            makeBundledExteriorBody(for: profile) ?? makeExteriorBody(for: profile)
+            makeBodyExplorer(for: profile)
         case .muscles:
             makeBundledAnatomy(
                 for: profile,
@@ -625,6 +630,42 @@ struct TwinSceneView: UIViewRepresentable {
         case .joints:
             makeJointBody(for: profile, coordinator: coordinator)
         }
+    }
+
+    private func makeBodyExplorer(for profile: TwinProfile) -> SCNNode {
+        let root = SCNNode()
+        root.addChildNode(
+            makeBundledExteriorBody(for: profile) ?? makeExteriorBody(for: profile)
+        )
+
+        let g = BodyGeometry(profile: profile)
+        let p = bodyPositions(g)
+        let markers = SCNNode()
+        markers.name = "EidomeBodyMeasurements"
+        markers.eulerAngles.y = -.pi / 12
+        let marker = bodyMetricMaterial()
+        let front = g.chestDepth * 0.58
+        let metrics: [(String, SCNVector3)] = [
+            ("Shoulder_width", SCNVector3(0, p.shoulderY, front)),
+            ("Chest_circumference", SCNVector3(0, p.hipY + g.torsoHeight * 0.69, front)),
+            ("Waist_circumference", SCNVector3(0, p.hipY + g.torsoHeight * 0.36, g.waistDepth * 0.58)),
+            ("Hip_circumference", SCNVector3(0, p.hipY + g.torsoHeight * 0.06, g.hipDepth * 0.58)),
+            ("Inseam", SCNVector3(0, p.hipY - g.totalHeight * 0.035, g.hipDepth * 0.32)),
+            ("Thigh_circumference", SCNVector3(g.hipWidth * 0.16, p.hipY - g.legLength * 0.20, g.thighRadius * 0.82)),
+            ("Calf_circumference", SCNVector3(g.hipWidth * 0.16, p.floorY + g.legLength * 0.25, g.calfRadius * 0.90))
+        ]
+
+        for (name, point) in metrics {
+            addJointMarker(
+                to: markers,
+                name: "EidomeBody_\(name)",
+                radius: g.totalHeight * 0.016,
+                at: point,
+                material: marker
+            )
+        }
+        root.addChildNode(markers)
+        return root
     }
 
     private func makeBundledExteriorBody(for profile: TwinProfile) -> SCNNode? {
@@ -1167,6 +1208,15 @@ struct TwinSceneView: UIViewRepresentable {
             emission: UIColor(red: 0.25, green: 0.86, blue: 0.64, alpha: 0.72),
             metalness: 0.08,
             roughness: 0.28
+        )
+    }
+
+    private func bodyMetricMaterial() -> SCNMaterial {
+        material(
+            diffuse: UIColor(red: 0.35, green: 0.94, blue: 0.72, alpha: 1),
+            emission: UIColor(red: 0.22, green: 0.94, blue: 0.70, alpha: 0.82),
+            metalness: 0.04,
+            roughness: 0.24
         )
     }
 

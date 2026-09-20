@@ -1,4 +1,4 @@
-# Eidome v0.18
+# Eidome v0.19
 
 Eidome is a body-centric digital twin prototype for iPhone and iPad.
 
@@ -13,19 +13,19 @@ Official domain: [eidome.com](https://eidome.com)
 
 Bundle identifier: `ai.knowlly.eidome`
 
-App Store version: `1.0` · Build: `18` · Internal milestone: `v0.18`
+App Store version: `1.0` · Build: `19` · Internal milestone: `v0.19`
 
-## v0.18 scope
+## v0.19 scope
 
-v0.18 turns anatomy selection into a cited learning experience rather than a label viewer.
+v0.19 makes the licensed anatomy asset easier to explore by region and tissue type while strengthening asset integrity and provenance.
 
-- Provide 55 curated structure-specific knowledge entries across muscle and skeleton layers
-- Explain each covered structure's region, primary function and movement relevance
-- Link every curated card to a relevant OpenStax Anatomy & Physiology 2e section
-- Keep an explicit general-reference fallback for structures not yet curated
-- Avoid injury, diagnosis and personalized tissue claims
-- Validate the minimum education catalog size in CI
-- Preserve searchable selection, layer isolation and deeper-structure reveal
+- Filter reference anatomy into head/neck, shoulder/chest, arm/forearm, trunk, hip/thigh and lower-leg/foot regions
+- Separate muscle surfaces from fascia, tendons and other connective structures
+- Expose independent calf, thigh, shoulder and forearm structures already present in the pinned source export
+- Attach source and CC BY-SA 4.0 provenance to every anatomy and joint selection card
+- Pin and validate the exact bundled USDZ SHA-256 checksum
+- Validate representative named structures in every high-value limb region
+- State honestly that the current export is superficial and does not contain every deep structure
 
 ### Foundation retained from v0.10
 

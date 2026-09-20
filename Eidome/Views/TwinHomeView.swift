@@ -125,6 +125,61 @@ private enum TwinExplorerMode: String, CaseIterable, Identifiable {
     }
 }
 
+private enum AnatomyRegion: String, CaseIterable, Identifiable {
+    case wholeBody = "All regions"
+    case headNeck = "Head & neck"
+    case shoulderChest = "Shoulder & chest"
+    case armForearm = "Arm & forearm"
+    case trunk = "Trunk"
+    case hipThigh = "Hip & thigh"
+    case lowerLegFoot = "Lower leg & foot"
+
+    var id: String { rawValue }
+
+    func contains(_ selection: AnatomySelection) -> Bool {
+        guard self != .wholeBody else { return true }
+        let name = selection.name.lowercased()
+        let terms: [String]
+        switch self {
+        case .wholeBody:
+            return true
+        case .headNeck:
+            terms = ["frontal", "parietal", "temporal", "occipital", "ethmoid", "maxilla", "mandible", "nasal", "zygomatic", "orbicularis", "frontalis", "occipitalis", "temporalis", "platysma", "cervical", "atlas", "axis", "cricoid", "arytenoid"]
+        case .shoulderChest:
+            terms = ["deltoid", "trapezius", "pector", "clavicle", "scapula", "sternum", "rib", "thoracic"]
+        case .armForearm:
+            terms = ["brach", "carpi", "digitorum", "humerus", "radius", "ulna", "antebrachial", "metacarpal", "finger of hand"]
+        case .trunk:
+            terms = ["abdominal", "latissimus", "lumbar", "sacrum", "coccyx", "vertebra t", "vertebra l"]
+        case .hipThigh:
+            terms = ["glute", "femur", "patella", "vastus", "rectus femoris", "sartorius", "biceps femoris", "semitendinosus", "hip bone", "fascia lata", "iliotibial", "popliteal"]
+        case .lowerLegFoot:
+            terms = ["gastrocnemius", "tibialis", "fibularis", "crural", "calcaneal", "plantar", "tibia", "fibula", "calcaneus", "talus", "navicular", "cuboid", "metatarsal", "finger of foot"]
+        }
+        return terms.contains { name.contains($0) }
+    }
+}
+
+private enum AnatomyDetailFilter: String, CaseIterable, Identifiable {
+    case all = "All tissues"
+    case muscle = "Muscle"
+    case connective = "Connective"
+
+    var id: String { rawValue }
+
+    func contains(_ selection: AnatomySelection) -> Bool {
+        switch self {
+        case .all:
+            return true
+        case .muscle:
+            return selection.category == "Muscle"
+        case .connective:
+            return ["Fascia", "Tendon", "Aponeurosis", "Retinaculum", "Ligament"]
+                .contains(selection.category)
+        }
+    }
+}
+
 struct TwinHomeView: View {
     @EnvironmentObject private var profileStore: ProfileStore
     @State private var isShowingProfiles = false
@@ -140,6 +195,8 @@ struct TwinHomeView: View {
     @State private var hiddenStructureIDs: Set<String> = []
     @State private var availableStructures: [AnatomySelection] = []
     @State private var isShowingAnatomyBrowser = false
+    @State private var anatomyRegion: AnatomyRegion = .wholeBody
+    @State private var anatomyDetailFilter: AnatomyDetailFilter = .all
 
     var body: some View {
         ZStack {
@@ -182,7 +239,7 @@ struct TwinHomeView: View {
         .sheet(isPresented: $isShowingAnatomyBrowser) {
             AnatomyBrowserSheet(
                 layer: selectedLayer,
-                structures: availableStructures,
+                structures: filteredAvailableStructures,
                 selectedStructure: selectedStructure
             ) { selection in
                 withAnimation(.easeInOut(duration: 0.25)) {
@@ -252,6 +309,20 @@ struct TwinHomeView: View {
         }
     }
 
+    private var filteredAvailableStructures: [AnatomySelection] {
+        availableStructures.filter { structure in
+            anatomyRegion.contains(structure)
+                && (selectedLayer != .muscles || anatomyDetailFilter.contains(structure))
+        }
+    }
+
+    private var sceneHiddenStructureIDs: Set<String> {
+        let filteredOut = availableStructures
+            .filter { !filteredAvailableStructures.contains($0) }
+            .map(\.id)
+        return hiddenStructureIDs.union(filteredOut)
+    }
+
     private func twinStage(_ profile: TwinProfile) -> some View {
         VStack(spacing: 12) {
             explorerContextHeader
@@ -261,13 +332,15 @@ struct TwinHomeView: View {
             if selectedMode == .anatomy {
                 anatomyLayerPicker
                     .transition(.opacity.combined(with: .move(edge: .top)))
+                anatomyFilters
+                    .transition(.opacity.combined(with: .move(edge: .top)))
             }
 
             TwinSceneView(
                 profile: profile,
                 layer: selectedLayer,
                 focusedStructure: focusedStructure,
-                hiddenStructureIDs: hiddenStructureIDs,
+                hiddenStructureIDs: sceneHiddenStructureIDs,
                 cameraResetToken: sceneResetToken,
                 onAnatomyCatalogChanged: { catalog in
                     availableStructures = catalog
@@ -458,6 +531,77 @@ struct TwinHomeView: View {
         .padding(.horizontal, 42)
     }
 
+    private var anatomyFilters: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            HStack {
+                Text("Explore by region")
+                    .font(.caption.bold())
+                Spacer()
+                Text("\(filteredAvailableStructures.count) of \(availableStructures.count) visible")
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(EidomeTheme.secondaryText)
+            }
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 7) {
+                    ForEach(AnatomyRegion.allCases) { region in
+                        filterChip(region.rawValue, isSelected: anatomyRegion == region) {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                anatomyRegion = region
+                                clearSelectionIfFilteredOut()
+                            }
+                        }
+                    }
+                }
+            }
+
+            if selectedLayer == .muscles {
+                HStack(spacing: 7) {
+                    ForEach(AnatomyDetailFilter.allCases) { detail in
+                        filterChip(detail.rawValue, isSelected: anatomyDetailFilter == detail) {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                anatomyDetailFilter = detail
+                                clearSelectionIfFilteredOut()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .padding(12)
+        .background(EidomeTheme.panel.opacity(0.72), in: RoundedRectangle(cornerRadius: 14))
+        .padding(.horizontal, 20)
+    }
+
+    private func filterChip(
+        _ title: String,
+        isSelected: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.caption2.bold())
+                .foregroundStyle(isSelected ? Color.white : EidomeTheme.secondaryText)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(
+                    isSelected ? EidomeTheme.violet.opacity(0.46) : Color.white.opacity(0.04),
+                    in: Capsule()
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private func clearSelectionIfFilteredOut() {
+        guard let selectedStructure else { return }
+        if !anatomyRegion.contains(selectedStructure)
+            || (selectedLayer == .muscles && !anatomyDetailFilter.contains(selectedStructure)) {
+            self.selectedStructure = nil
+            focusedStructure = nil
+        }
+    }
+
     private var anatomyBrowseCard: some View {
         Button {
             isShowingAnatomyBrowser = true
@@ -475,7 +619,7 @@ struct TwinHomeView: View {
                     Text(
                         availableStructures.isEmpty
                             ? "Loading this reference layer…"
-                            : "\(availableStructures.count) \(selectedMode == .body ? "body inputs" : selectedMode == .joints ? "named joint landmarks" : "named reference structures")"
+                            : "\(filteredAvailableStructures.count) \(selectedMode == .body ? "body inputs" : selectedMode == .joints ? "named joint landmarks" : "visible reference structures")"
                     )
                     .font(.caption2)
                     .foregroundStyle(EidomeTheme.secondaryText)
@@ -674,6 +818,7 @@ struct TwinHomeView: View {
         withAnimation(.easeInOut(duration: 0.2)) {
             selectedLayer = layer
             lastAnatomyLayer = layer
+            anatomyDetailFilter = .all
             clearAnatomyInteraction()
         }
     }
@@ -914,6 +1059,20 @@ struct TwinHomeView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(selection.layer == .joints
+                     ? "Skeleton source: Z-Anatomy / BodyParts3D derivative"
+                     : "Source mesh: \(selection.name) · Z-Anatomy derivative")
+                    .font(.caption2)
+                    .foregroundStyle(EidomeTheme.secondaryText)
+                Link(
+                    "CC BY-SA 4.0 · attribution and licence",
+                    destination: URL(string: "https://github.com/Z-Anatomy/Models-of-human-anatomy/blob/b9c9f98066e1e786814603b047c5bd3638c2a864/License.txt")!
+                )
+                .font(.caption2.weight(.semibold))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             if selection.category == "Fascia" {
                 Button {

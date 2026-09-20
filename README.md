@@ -1,4 +1,4 @@
-# Eidome v0.16
+# Eidome v0.17
 
 Eidome is a body-centric digital twin prototype for iPhone and iPad.
 
@@ -13,20 +13,20 @@ Official domain: [eidome.com](https://eidome.com)
 
 Bundle identifier: `ai.knowlly.eidome`
 
-App Store version: `1.0` · Build: `16` · Internal milestone: `v0.16`
+App Store version: `1.0` · Build: `17` · Internal milestone: `v0.17`
 
-## v0.16 scope
+## v0.17 scope
 
-v0.16 replaces the mannequin-style joint view with an interactive joint explorer grounded on the reference skeleton.
+v0.17 turns Body mode into a useful map of the inputs shaping the exterior twin.
 
-- Show twelve named bilateral shoulder, elbow, wrist, hip, knee and ankle landmarks
-- Place landmarks over the bundled reference skeleton instead of a mannequin
-- Select landmarks by tapping the model or searching the joint browser
-- Explain supported movement in plain language
-- Show entered ankle, hip and shoulder mobility values with side and provenance
-- Link every selected joint directly to mobility entry
-- Keep joint positions clearly labeled as estimated rather than measured
-- Preserve independent, persistent camera state for every profile and layer
+- Show seven selectable markers for shoulder, chest, waist, hip, inseam, thigh and calf inputs
+- Select markers directly or through a searchable measurement browser
+- Show the latest entered value, provenance and recording date when available
+- State when older saved values have no recorded date
+- Explain how each measurement changes the exterior estimate
+- Distinguish entered measurements from regions still estimated by the model
+- Recommend the next useful missing body measurement
+- Preserve backward compatibility with existing locally saved profiles
 
 ### Foundation retained from v0.10
 

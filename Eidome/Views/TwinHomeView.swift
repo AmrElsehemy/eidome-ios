@@ -211,7 +211,7 @@ struct TwinHomeView: View {
 
             whyThisMattersCard(profile)
 
-            if selectedMode == .anatomy || selectedMode == .joints {
+            if selectedMode == .body || selectedMode == .anatomy || selectedMode == .joints {
                 anatomyBrowseCard
             }
 
@@ -239,9 +239,9 @@ struct TwinHomeView: View {
             }
 
             if let selectedStructure {
-                anatomySelectionCard(selectedStructure, profile: profile)
+                selectionCard(selectedStructure, profile: profile)
                     .transition(.move(edge: .top).combined(with: .opacity))
-            } else if selectedMode == .anatomy || selectedMode == .joints {
+            } else {
                 anatomyEmptyState
             }
 
@@ -361,12 +361,12 @@ struct TwinHomeView: View {
                     .background(EidomeTheme.cyan.opacity(0.10), in: Circle())
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Browse structures")
+                    Text(selectedMode == .body ? "Browse measurements" : "Browse structures")
                         .font(.subheadline.bold())
                     Text(
                         availableStructures.isEmpty
                             ? "Loading this reference layer…"
-                            : "\(availableStructures.count) named \(selectedMode == .joints ? "joint landmarks" : "reference structures")"
+                            : "\(availableStructures.count) \(selectedMode == .body ? "body inputs" : selectedMode == .joints ? "named joint landmarks" : "named reference structures")"
                     )
                     .font(.caption2)
                     .foregroundStyle(EidomeTheme.secondaryText)
@@ -391,9 +391,13 @@ struct TwinHomeView: View {
         HStack(spacing: 10) {
             Image(systemName: "hand.tap")
                 .foregroundStyle(EidomeTheme.cyan)
-            Text(selectedMode == .joints
-                 ? "Tap a joint marker or browse the list to connect a landmark with movement data."
-                 : "Tap the model or browse the structure list to identify and isolate anatomy.")
+            Text(
+                selectedMode == .body
+                    ? "Tap a measurement marker or browse the list to see what shaped this estimate."
+                    : selectedMode == .joints
+                        ? "Tap a joint marker or browse the list to connect a landmark with movement data."
+                        : "Tap the model or browse the structure list to identify and isolate anatomy."
+            )
                 .font(.caption)
                 .foregroundStyle(EidomeTheme.secondaryText)
             Spacer()
@@ -479,13 +483,14 @@ struct TwinHomeView: View {
         switch selectedMode {
         case .body:
             let count = profile.bodyMeasurements?.completedCount ?? 0
+            let nextMeasurement = nextMissingBodyMeasurement(profile)
             return (
                 "Your body view turns the information you enter into a visual estimate you can refine over time.",
                 "Understanding which proportions are measured and which are still estimated.",
                 "It is not a body scan and does not measure body composition or tissue health.",
                 count == 7
                     ? "Your seven regional measurements are entered; update them when your body changes."
-                    : "Add \(7 - count) more regional measurement\(7 - count == 1 ? "" : "s") to replace broad shape estimates."
+                    : "Next useful input: \(nextMeasurement ?? "a regional measurement") (\(7 - count) remaining)."
             )
         case .anatomy:
             if let selectedStructure {
@@ -513,6 +518,20 @@ struct TwinHomeView: View {
                     : "Measure \(8 - count) more joint range\(8 - count == 1 ? "" : "s") to build your mobility baseline."
             )
         }
+    }
+
+    private func nextMissingBodyMeasurement(_ profile: TwinProfile) -> String? {
+        let values = profile.bodyMeasurements
+        let ordered: [(String, Double?)] = [
+            ("waist circumference", values?.waistCircumferenceCentimeters),
+            ("hip circumference", values?.hipCircumferenceCentimeters),
+            ("chest circumference", values?.chestCircumferenceCentimeters),
+            ("shoulder width", values?.shoulderWidthCentimeters),
+            ("inseam", values?.inseamCentimeters),
+            ("thigh circumference", values?.thighCircumferenceCentimeters),
+            ("calf circumference", values?.calfCircumferenceCentimeters)
+        ]
+        return ordered.first(where: { $0.1 == nil })?.0
     }
 
 
@@ -556,6 +575,140 @@ struct TwinHomeView: View {
         hiddenStructureIDs.removeAll()
         availableStructures.removeAll()
         isShowingAnatomyBrowser = false
+    }
+
+    @ViewBuilder
+    private func selectionCard(
+        _ selection: AnatomySelection,
+        profile: TwinProfile
+    ) -> some View {
+        if selection.layer == .body {
+            bodyMeasurementCard(selection, profile: profile)
+        } else {
+            anatomySelectionCard(selection, profile: profile)
+        }
+    }
+
+    private func bodyMeasurementCard(
+        _ selection: AnatomySelection,
+        profile: TwinProfile
+    ) -> some View {
+        let detail = bodyMeasurementDetail(selection, profile: profile)
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                Image(systemName: "ruler")
+                    .font(.title3)
+                    .foregroundStyle(EidomeTheme.cyan)
+                    .frame(width: 40, height: 40)
+                    .background(EidomeTheme.cyan.opacity(0.10), in: Circle())
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(selection.name).font(.subheadline.bold())
+                    Text(detail.source)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(detail.isEntered ? EidomeTheme.cyan : EidomeTheme.secondaryText)
+                }
+                Spacer()
+                Button {
+                    selectedStructure = nil
+                    focusedStructure = nil
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.caption.bold())
+                        .frame(width: 30, height: 30)
+                        .background(EidomeTheme.panel, in: Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Clear selected measurement")
+            }
+
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Latest value")
+                        .font(.caption2)
+                        .foregroundStyle(EidomeTheme.secondaryText)
+                    Text(detail.value)
+                        .font(.title3.bold().monospacedDigit())
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("Recorded")
+                        .font(.caption2)
+                        .foregroundStyle(EidomeTheme.secondaryText)
+                    Text(detail.date)
+                        .font(.caption.bold())
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("How it affects the twin").font(.caption.bold())
+                Text(detail.effect)
+                    .font(.caption)
+                    .foregroundStyle(EidomeTheme.secondaryText)
+            }
+
+            Button {
+                isRefiningTwin = true
+            } label: {
+                Label(detail.isEntered ? "Update measurement" : "Add measurement", systemImage: "ruler")
+                    .font(.caption.bold())
+                    .foregroundStyle(EidomeTheme.cyan)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 9)
+                    .background(EidomeTheme.cyan.opacity(0.10), in: RoundedRectangle(cornerRadius: 10))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(14)
+        .glassCard()
+        .padding(.horizontal, 20)
+    }
+
+    private func bodyMeasurementDetail(
+        _ selection: AnatomySelection,
+        profile: TwinProfile
+    ) -> (value: String, source: String, date: String, effect: String, isEntered: Bool) {
+        let measurements = profile.bodyMeasurements
+        let name = selection.name.lowercased()
+        let value: Double?
+        let effect: String
+
+        if name.contains("shoulder") {
+            value = measurements?.shoulderWidthCentimeters
+            effect = "Adjusts shoulder breadth relative to the torso."
+        } else if name.contains("chest") {
+            value = measurements?.chestCircumferenceCentimeters
+            effect = "Refines chest width and depth instead of relying only on height and weight."
+        } else if name.contains("waist") {
+            value = measurements?.waistCircumferenceCentimeters
+            effect = "Refines the waist region of the exterior body estimate."
+        } else if name.contains("hip") {
+            value = measurements?.hipCircumferenceCentimeters
+            effect = "Refines hip width and depth in the exterior estimate."
+        } else if name.contains("inseam") {
+            value = measurements?.inseamCentimeters
+            effect = "Adjusts the model's leg-to-torso proportion."
+        } else if name.contains("thigh") {
+            value = measurements?.thighCircumferenceCentimeters
+            effect = "Refines upper-leg volume while preserving overall height."
+        } else {
+            value = measurements?.calfCircumferenceCentimeters
+            effect = "Refines lower-leg volume while preserving overall height."
+        }
+
+        let isEntered = value != nil
+        return (
+            value.map { $0.formatted(.number.precision(.fractionLength(0...1))) + " cm" }
+                ?? "Not entered",
+            isEntered ? "Entered measurement" : "Estimated from profile inputs",
+            isEntered
+                ? (profile.measurementsUpdatedAt?.formatted(date: .abbreviated, time: .omitted)
+                    ?? "Date not recorded")
+                : "Not measured",
+            effect,
+            isEntered
+        )
     }
 
     private func anatomySelectionCard(
@@ -1022,10 +1175,11 @@ private struct AnatomyBrowserSheet: View {
                         }
 
                         Section {
-                            Text(
-                                "Names and selection granularity follow the source anatomy mesh. "
-                                + "Some surfaces, including fascia, cover several underlying muscles."
-                            )
+                            Text(layer == .body
+                                 ? "Body markers identify model inputs. Missing values remain estimates derived from the profile's height, weight and other entered measurements."
+                                 : layer == .joints
+                                    ? "Joint markers are estimated landmarks aligned to the reference skeleton; they are not measured joint centres."
+                                    : "Names and selection granularity follow the source anatomy mesh. Some surfaces, including fascia, cover several underlying muscles.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         }
@@ -1033,13 +1187,16 @@ private struct AnatomyBrowserSheet: View {
                     .listStyle(.insetGrouped)
                 }
             }
-            .navigationTitle(
-                layer == .muscles
+            .navigationTitle(layer == .body
+                ? "Body measurements"
+                : layer == .muscles
                     ? "Muscle structures"
-                    : layer == .joints ? "Joint landmarks" : "Skeletal structures"
-            )
+                    : layer == .joints ? "Joint landmarks" : "Skeletal structures")
             .navigationBarTitleDisplayMode(.inline)
-            .searchable(text: $searchText, prompt: "Search structures")
+            .searchable(
+                text: $searchText,
+                prompt: layer == .body ? "Search measurements" : "Search structures"
+            )
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") {
@@ -1248,6 +1405,7 @@ private struct RefineTwinView: View {
                         updated.heightCentimeters = heightCentimeters
                         updated.weightKilograms = weightKilograms
                         updated.bodyMeasurements = measurements.isEmpty ? nil : measurements
+                        updated.measurementsUpdatedAt = measurements.isEmpty ? nil : .now
                         profileStore.update(updated)
                         dismiss()
                     }

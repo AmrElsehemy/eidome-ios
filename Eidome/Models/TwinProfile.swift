@@ -87,6 +87,7 @@ struct TwinProfile: Identifiable, Codable, Hashable {
     var weightKilograms: Double
     var createdAt: Date
     var bodyMeasurements: BodyMeasurements?
+    var measurementsUpdatedAt: Date?
     var mobilityProfile: MobilityProfile?
 
     init(
@@ -99,6 +100,7 @@ struct TwinProfile: Identifiable, Codable, Hashable {
         weightKilograms: Double,
         createdAt: Date = .now,
         bodyMeasurements: BodyMeasurements? = nil,
+        measurementsUpdatedAt: Date? = nil,
         mobilityProfile: MobilityProfile? = nil
     ) {
         self.id = id
@@ -110,6 +112,7 @@ struct TwinProfile: Identifiable, Codable, Hashable {
         self.weightKilograms = weightKilograms
         self.createdAt = createdAt
         self.bodyMeasurements = bodyMeasurements
+        self.measurementsUpdatedAt = measurementsUpdatedAt
         self.mobilityProfile = mobilityProfile
     }
 

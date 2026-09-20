@@ -123,23 +123,44 @@ private struct PrivacyNoticeView: View {
 }
 
 private struct AssetAcknowledgementsView: View {
+    @State private var anatomyExportItems: [URL] = []
+
     var body: some View {
         List {
-            Section("Z-Anatomy") {
-                Text("Eidome’s reference skeleton and superficial-muscle layers are derived from Z-Anatomy / Models of Human Anatomy.")
-                Link("View Z-Anatomy source", destination: URL(string: "https://github.com/Z-Anatomy/Models-of-human-anatomy")!)
+            Section("Z-Anatomy derivative") {
+                Text("“Z-Anatomy — The libre 3D atlas of anatomy — CC BY-SA 4.0.” Authors include Gauthier Kervyn (design, 3D and anatomy), Marcin Zielinski (Blender add-on) and Lluis Vinent (Unity development).")
+                Text("Eidome’s bundled anatomy model is an adapted work licensed under Creative Commons Attribution-ShareAlike 4.0. Eidome selected the skeletal and superficial-muscle layers, removed guide geometry, decimated meshes, normalized scale and frame, and converted the result to USDZ.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+
+                Link("Pinned Z-Anatomy source and attribution", destination: URL(string: "https://github.com/Z-Anatomy/Models-of-human-anatomy/blob/b9c9f98066e1e786814603b047c5bd3638c2a864/License.txt")!)
                 Link("CC BY-SA 4.0 licence", destination: URL(string: "https://creativecommons.org/licenses/by-sa/4.0/")!)
+
+                if anatomyExportItems.isEmpty {
+                    Label("Licensed model export unavailable", systemImage: "exclamationmark.triangle")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                } else {
+                    ShareLink(items: anatomyExportItems) {
+                        Label("Export model and licence notice", systemImage: "square.and.arrow.up")
+                    }
+                }
             }
 
             Section("BodyParts3D") {
-                Text("Z-Anatomy is based in part on BodyParts3D, distributed under CC BY-SA 2.1 Japan.")
+                Text("“BodyParts3D — The Database Center for Life Science — CC BY-SA 2.1 Japan.” Original model by Kousaku Okubo.")
+                Link("Download original BodyParts3D data", destination: URL(string: "https://dbarchive.biosciencedbc.jp/en/bodyparts3d/download.html")!)
                 Link("CC BY-SA 2.1 Japan licence", destination: URL(string: "https://creativecommons.org/licenses/by-sa/2.1/jp/deed.en")!)
             }
 
-            Section("MakeHuman and MPFB") {
-                Text("The exterior prototype was generated with MakeHuman and MPFB. Individual source assets retain their respective licences.")
-                Text("Prototype clothing: elvs_male_swim_shorts1 by Elvaerwyn, CC BY.")
-                Link("View MPFB source", destination: URL(string: "https://github.com/makehumancommunity/mpfb2")!)
+            Section("MakeHuman and MPFB avatar") {
+                Text("The exterior avatar uses MakeHuman/MPFB core assets made available under CC0.")
+                Text("Skin: toigo_light_skin_male_bronze by MargaretToigo, CC0.")
+                Text("Clothing: elvs_male_swim_shorts1 by Elvaerwyn, published as CC BY by the MakeHuman Community asset catalogue.")
+                Link("MakeHuman asset licence", destination: URL(string: "https://static.makehumancommunity.org/about/license.html")!)
+                Link("Skin catalogue entry", destination: URL(string: "https://static.makehumancommunity.org/assets/assetpacks/skins02.html")!)
+                Link("Clothing catalogue entry", destination: URL(string: "https://static.makehumancommunity.org/assets/assetpacks/pants03.html")!)
+                Link("MPFB source", destination: URL(string: "https://github.com/makehumancommunity/mpfb2")!)
             }
 
             Section("Model scope") {
@@ -148,5 +169,52 @@ private struct AssetAcknowledgementsView: View {
         }
         .navigationTitle("Asset acknowledgements")
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            anatomyExportItems = Self.makeAnatomyExportItems()
+        }
     }
+
+    private static func makeAnatomyExportItems() -> [URL] {
+        guard let modelURL = Bundle.main.url(forResource: "eidome-anatomy", withExtension: "usdz") else {
+            return []
+        }
+
+        let noticeURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("EIDOME-ANATOMY-LICENCE.txt")
+        do {
+            try anatomyNotice.write(to: noticeURL, atomically: true, encoding: .utf8)
+            return [modelURL, noticeURL]
+        } catch {
+            return [modelURL]
+        }
+    }
+
+    private static let anatomyNotice = """
+    EIDOME ANATOMY MODEL — LICENCE AND ATTRIBUTION
+
+    This eidome-anatomy.usdz file is an adapted work licensed under the
+    Creative Commons Attribution-ShareAlike 4.0 International licence:
+    https://creativecommons.org/licenses/by-sa/4.0/
+
+    Source revision:
+    https://github.com/Z-Anatomy/Models-of-human-anatomy/tree/b9c9f98066e1e786814603b047c5bd3638c2a864
+
+    Required model credits:
+    “Z-Anatomy — The libre 3D atlas of anatomy — CC BY-SA 4.0.”
+    Gauthier Kervyn — design, 3D and anatomy
+    Marcin Zielinski — Blender add-on
+    Lluis Vinent — Unity development
+
+    “BodyParts3D — The Database Center for Life Science — CC BY-SA 2.1 Japan.”
+    Kousaku Okubo — original BodyParts3D model
+    https://dbarchive.biosciencedbc.jp/en/bodyparts3d/download.html
+    https://creativecommons.org/licenses/by-sa/2.1/jp/deed.en
+
+    Eidome modifications:
+    Selected skeletal and superficial-muscle layers; removed guide geometry;
+    decimated meshes; normalized scale and coordinate frame; converted to USDZ.
+
+    No endorsement by the original authors or licensors is implied.
+    This notice applies to the anatomy model, not to Eidome application code.
+    """
 }

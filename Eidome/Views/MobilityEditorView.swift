@@ -27,7 +27,7 @@ struct MobilityEditorView: View {
                         VStack(alignment: .leading, spacing: 6) {
                             Text("How \(profile.name) moves")
                                 .font(.title2.bold())
-                            Text("Record measured joint ranges in degrees. Leave unknown values empty.")
+                            Text("Record measured joint ranges in degrees. Leave unknown values empty. The model does not measure motion or diagnose restrictions.")
                                 .font(.subheadline)
                                 .foregroundStyle(EidomeTheme.secondaryText)
                         }
@@ -60,9 +60,16 @@ struct MobilityEditorView: View {
                                 systemImage: "arrow.left.and.right"
                             )
                             .font(.footnote.weight(.semibold))
-                            .foregroundStyle(asymmetry >= 8 ? .orange : EidomeTheme.cyan)
+                            .foregroundStyle(EidomeTheme.cyan)
                             .frame(maxWidth: .infinity, alignment: .leading)
                         }
+
+                        Link("Movement reference: OpenStax Anatomy & Physiology 2e, §9.5",
+                             destination: URL(string: "https://openstax.org/books/anatomy-and-physiology-2e/pages/9-5-types-of-body-movements")!)
+                            .font(.caption)
+                        Text("Use the same measurement method and position on both sides. Do not force a movement. Seek professional guidance for pain or medical decisions.")
+                            .font(.caption)
+                            .foregroundStyle(EidomeTheme.secondaryText)
 
                         Label("Self-assessment data is informational, not a diagnosis.", systemImage: "info.circle")
                             .font(.caption)
@@ -94,6 +101,19 @@ struct MobilityEditorView: View {
         .preferredColorScheme(.dark)
     }
 
+    private func movementExplanation(_ title: String) -> String {
+        switch title {
+        case "Ankle dorsiflexion":
+            return "The top of the foot moves toward the shin at the ankle."
+        case "Hip internal rotation":
+            return "The thigh turns inward around its long axis at the hip."
+        case "Shoulder flexion":
+            return "The arm moves forward and upward at the shoulder."
+        default:
+            return "The upper trunk turns left or right through several spinal joints, not one joint."
+        }
+    }
+
     private func mobilityCard(
         title: String,
         left: Binding<Double?>,
@@ -102,6 +122,12 @@ struct MobilityEditorView: View {
         VStack(alignment: .leading, spacing: 14) {
             Text(title)
                 .font(.headline)
+            Text(movementExplanation(title))
+                .font(.caption)
+                .foregroundStyle(EidomeTheme.secondaryText)
+            Text("Entered: \([left.wrappedValue, right.wrappedValue].compactMap { $0 }.count) of 2 sides. Differences alone do not indicate injury.")
+                .font(.caption2)
+                .foregroundStyle(EidomeTheme.secondaryText)
             HStack(spacing: 12) {
                 AngleInput(label: "LEFT", value: left)
                 AngleInput(label: "RIGHT", value: right)

@@ -1,13 +1,36 @@
-Eidome creates an estimated visual body model for fitness education and personal tracking. It is not a medical device and does not diagnose conditions or recommend treatment.
+Guideline 2.1 — Information Needed
 
-This version has no account, advertising, third-party analytics, or cloud sync. Profile information remains in local app storage on the device. The device owner may create adult-managed dependent profiles.
+Physical-device recording
+A screen recording captured on a supported physical iPhone running the latest available iOS version is provided in the Resolution Center reply accompanying this submission. It begins with launching Eidome from the Home Screen and demonstrates the typical user flow and principal features.
 
-No sign-in or review credentials are required.
+Eidome has no account registration or login, public user-generated content, paid content, subscriptions, or in-app purchases.
 
-Suggested review flow:
-1. Create a twin from the onboarding screen.
-2. Rotate and zoom the 3D model.
-3. Switch between Body, Muscles, Skeleton, and Joints.
-4. Add body and mobility measurements.
-5. Add a second profile and switch profiles.
-6. Open About Eidome to review privacy information and delete all local data.
+Purpose, audience, and value
+Eidome is a consumer fitness-education and personal body-tracking application. It helps adults interested in fitness and mobility organize body measurements and user-entered mobility observations and understand them through an interactive three-dimensional body and reference-anatomy experience.
+
+Eidome is informational and educational. It does not provide medical diagnosis, treatment, injury prediction, clinical measurement, or medical advice. The avatar is a parametric estimate rather than a body scan, and internal anatomy is reference material rather than a scan of the user.
+
+Access and suggested review flow
+No account, credentials, subscription, sample file, or internet connection is required.
+
+1. Launch Eidome and create a local profile.
+2. Open Body and review or add measurements that shape the estimated exterior model.
+3. Rotate and zoom the 3D model, change the view, leave the screen or app, and return to see the safe view restored.
+4. Open Anatomy, switch between Muscles and Skeleton, browse/search named structures, and select or isolate a structure.
+5. Open Joints and review or enter user-measured mobility observations.
+6. Create or switch to another local profile to verify that profile data and saved 3D views remain independent.
+7. Use Reset view to restore the deterministic default camera.
+8. Open About, Privacy, Support, and Asset Acknowledgements, then review the in-app deletion controls.
+
+External services, tools, and platforms
+Eidome does not depend on external authentication, payments, advertising, third-party analytics, cloud AI, remote data providers, or cloud sync for its core functionality. It uses Apple iOS frameworks and locally bundled 3D assets. Personal profile information and 3D workspace preferences are stored locally on the device.
+
+Regional availability
+Eidome provides the same functionality and content in every region where it is available. There are no region-specific accounts, features, subscriptions, or content restrictions.
+
+Third-party material and authorization
+The locally bundled reference-anatomy model is an adapted work derived from Z-Anatomy and BodyParts3D material distributed under Creative Commons Attribution-ShareAlike licences. Eidome provides attribution, exact source references, licence links, a modification notice, and an export path for the bundled derivative together with its licence notice under Settings > Asset Acknowledgements.
+
+The exterior avatar uses appropriately licensed MakeHuman/MPFB assets. Complete credits, authorship, source references, licences, and modification information are available inside the app under Settings > Asset Acknowledgements.
+
+No endorsement by the original authors or licensors is implied.

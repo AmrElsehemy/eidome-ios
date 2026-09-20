@@ -12,11 +12,11 @@ Every feature must contribute at least one of these: a measurable metric, a mode
 
 All twin data must remain distinguishable as measured, derived or estimated. Never imply medical accuracy from a parametric body model.
 
-## v0.12 boundary
+## v0.15 boundary
 
-Keep v0.12 focused on making the existing anatomy assets easy to discover, select and inspect. Users must be able to browse and search named source structures instead of relying only on precise 3D tapping.
+Keep v0.15 focused on a dependable persistent 3D workspace. Each profile must remember a safe rotation, target and zoom independently for Body, Muscles, Skeleton and Joints across layer changes, navigation, backgrounding and relaunch.
 
-Do not add new anatomy assets or imply finer anatomical segmentation than the source mesh provides. Anatomy remains a visual reference with estimated proportions, not a scan of the user's internal structures. HealthKit, accounts, video analysis and cloud infrastructure belong to later versions.
+Reset view must remain explicit, accessible and deterministic. Reject corrupt or unsafe saved camera values. Deleting a profile or all local data must also remove its saved 3D views. Do not add new anatomy assets or imply greater model accuracy in this release.
 
 ## Release rule
 

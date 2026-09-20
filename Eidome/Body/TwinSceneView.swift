@@ -41,6 +41,127 @@ enum TwinBodyLayer: String, CaseIterable, Identifiable, Hashable {
 }
 
 
+struct TwinCameraState: Codable, Equatable {
+    let transform: [Float]
+    let target: [Float]
+    let fieldOfView: Double
+    let orthographicScale: Double
+
+    init?(view: SCNView) {
+        guard let pointOfView = view.pointOfView else { return nil }
+        let matrix = pointOfView.presentation.transform
+        self.transform = [
+            matrix.m11, matrix.m12, matrix.m13, matrix.m14,
+            matrix.m21, matrix.m22, matrix.m23, matrix.m24,
+            matrix.m31, matrix.m32, matrix.m33, matrix.m34,
+            matrix.m41, matrix.m42, matrix.m43, matrix.m44
+        ]
+        let cameraTarget = view.defaultCameraController.target
+        self.target = [cameraTarget.x, cameraTarget.y, cameraTarget.z]
+        self.fieldOfView = Double(pointOfView.camera?.fieldOfView ?? 31)
+        self.orthographicScale = pointOfView.camera?.orthographicScale ?? 1
+        guard isSafe else { return nil }
+    }
+
+    var isSafe: Bool {
+        guard
+            transform.count == 16,
+            target.count == 3,
+            transform.allSatisfy(\.isFinite),
+            target.allSatisfy(\.isFinite),
+            fieldOfView.isFinite,
+            orthographicScale.isFinite
+        else { return false }
+
+        let distance = sqrt(
+            transform[12] * transform[12]
+                + transform[13] * transform[13]
+                + transform[14] * transform[14]
+        )
+        return (0.35...12).contains(distance)
+            && target.allSatisfy { abs($0) <= 5 }
+            && (10...100).contains(fieldOfView)
+            && (0.05...30).contains(orthographicScale)
+    }
+
+    var sceneTransform: SCNMatrix4 {
+        var matrix = SCNMatrix4Identity
+        matrix.m11 = transform[0]
+        matrix.m12 = transform[1]
+        matrix.m13 = transform[2]
+        matrix.m14 = transform[3]
+        matrix.m21 = transform[4]
+        matrix.m22 = transform[5]
+        matrix.m23 = transform[6]
+        matrix.m24 = transform[7]
+        matrix.m31 = transform[8]
+        matrix.m32 = transform[9]
+        matrix.m33 = transform[10]
+        matrix.m34 = transform[11]
+        matrix.m41 = transform[12]
+        matrix.m42 = transform[13]
+        matrix.m43 = transform[14]
+        matrix.m44 = transform[15]
+        return matrix
+    }
+
+    var sceneTarget: SCNVector3 {
+        SCNVector3(target[0], target[1], target[2])
+    }
+}
+
+enum TwinCameraStateStore {
+    private static let keyPrefix = "eidome.camera-state.v1"
+
+    static func load(profileID: UUID, layer: TwinBodyLayer) -> TwinCameraState? {
+        let defaults = UserDefaults.standard
+        let storageKey = key(profileID: profileID, layer: layer)
+        guard
+            let data = defaults.data(forKey: storageKey),
+            let state = try? JSONDecoder().decode(TwinCameraState.self, from: data),
+            state.isSafe
+        else {
+            defaults.removeObject(forKey: storageKey)
+            return nil
+        }
+        return state
+    }
+
+    static func save(
+        _ state: TwinCameraState,
+        profileID: UUID,
+        layer: TwinBodyLayer
+    ) {
+        guard state.isSafe, let data = try? JSONEncoder().encode(state) else { return }
+        UserDefaults.standard.set(data, forKey: key(profileID: profileID, layer: layer))
+    }
+
+    static func remove(profileID: UUID, layer: TwinBodyLayer) {
+        UserDefaults.standard.removeObject(forKey: key(profileID: profileID, layer: layer))
+    }
+
+    static func removeAll(profileID: UUID) {
+        let prefix = "\(keyPrefix).\(profileID.uuidString)."
+        removeKeys(withPrefix: prefix)
+    }
+
+    static func removeAll() {
+        removeKeys(withPrefix: "\(keyPrefix).")
+    }
+
+    private static func key(profileID: UUID, layer: TwinBodyLayer) -> String {
+        "\(keyPrefix).\(profileID.uuidString).\(layer.rawValue.lowercased())"
+    }
+
+    private static func removeKeys(withPrefix prefix: String) {
+        let defaults = UserDefaults.standard
+        defaults.dictionaryRepresentation().keys
+            .filter { $0.hasPrefix(prefix) }
+            .forEach { defaults.removeObject(forKey: $0) }
+    }
+}
+
+
 struct AnatomySelection: Identifiable, Equatable {
     enum Side: String {
         case left = "Left"
@@ -149,6 +270,7 @@ struct TwinSceneView: UIViewRepresentable {
 
     func makeCoordinator() -> Coordinator {
         Coordinator(
+            profileID: profile.id,
             onAnatomyCatalogChanged: onAnatomyCatalogChanged,
             onStructureSelected: onStructureSelected
         )
@@ -156,6 +278,7 @@ struct TwinSceneView: UIViewRepresentable {
 
     func makeUIView(context: Context) -> SCNView {
         let view = SCNView()
+        context.coordinator.attach(to: view)
         view.backgroundColor = .clear
         view.antialiasingMode = .multisampling4X
         view.allowsCameraControl = true
@@ -168,12 +291,17 @@ struct TwinSceneView: UIViewRepresentable {
         )
         tapRecognizer.cancelsTouchesInView = false
         view.addGestureRecognizer(tapRecognizer)
+        let restoredCameraState = TwinCameraStateStore.load(
+            profileID: profile.id,
+            layer: layer
+        )
+        context.coordinator.cameraStates[layer] = restoredCameraState
         configureScene(
             in: view,
             profile: profile,
             layer: layer,
             coordinator: context.coordinator,
-            cameraState: nil
+            cameraState: restoredCameraState
         )
         publishAnatomyCatalog(in: view, coordinator: context.coordinator)
         applyAnatomyDisplay(
@@ -202,26 +330,31 @@ struct TwinSceneView: UIViewRepresentable {
             let isSameProfile = context.coordinator.lastProfile?.id == profile.id
             if isSameProfile,
                let previousLayer = context.coordinator.lastLayer,
-               let pointOfView = view.pointOfView {
-                context.coordinator.cameraStates[previousLayer] = Coordinator.CameraState(
-                    transform: pointOfView.presentation.transform,
-                    target: view.defaultCameraController.target,
-                    fieldOfView: pointOfView.camera?.fieldOfView ?? 31,
-                    orthographicScale: pointOfView.camera?.orthographicScale ?? 1
+               let state = TwinCameraState(view: view) {
+                context.coordinator.cameraStates[previousLayer] = state
+                TwinCameraStateStore.save(
+                    state,
+                    profileID: profile.id,
+                    layer: previousLayer
                 )
             } else if !isSameProfile {
                 context.coordinator.cameraStates.removeAll()
             }
 
+            let restoredCameraState = resetsCamera
+                ? nil
+                : context.coordinator.cameraStates[layer]
+                    ?? TwinCameraStateStore.load(profileID: profile.id, layer: layer)
             configureScene(
                 in: view,
                 profile: profile,
                 layer: layer,
                 coordinator: context.coordinator,
-                cameraState: resetsCamera ? nil : context.coordinator.cameraStates[layer]
+                cameraState: restoredCameraState
             )
             if resetsCamera {
                 context.coordinator.cameraStates[layer] = nil
+                TwinCameraStateStore.remove(profileID: profile.id, layer: layer)
             }
             context.coordinator.lastProfile = profile
             context.coordinator.lastLayer = layer
@@ -243,32 +376,68 @@ struct TwinSceneView: UIViewRepresentable {
     }
 
     final class Coordinator: NSObject {
+        let profileID: UUID
+        weak var sceneView: SCNView?
+        var lifecycleObservers: [NSObjectProtocol] = []
         var lastProfile: TwinProfile?
         var lastLayer: TwinBodyLayer?
         var lastFocusedStructure: AnatomySelection?
         var lastHiddenStructureIDs: Set<String> = []
         var lastCameraResetToken = 0
-        struct CameraState {
-            let transform: SCNMatrix4
-            let target: SCNVector3
-            let fieldOfView: CGFloat
-            let orthographicScale: Double
-        }
 
         var onAnatomyCatalogChanged: (([AnatomySelection]) -> Void)?
         var onStructureSelected: ((AnatomySelection) -> Void)?
         var lastAnatomyCatalogIDs: [String] = []
-        var cameraStates: [TwinBodyLayer: CameraState] = [:]
+        var cameraStates: [TwinBodyLayer: TwinCameraState] = [:]
         var cachedAnatomyNodes: [
             String: (node: SCNNode, worldTransform: SCNMatrix4)
         ] = [:]
 
         init(
+            profileID: UUID,
             onAnatomyCatalogChanged: (([AnatomySelection]) -> Void)?,
             onStructureSelected: ((AnatomySelection) -> Void)?
         ) {
+            self.profileID = profileID
             self.onAnatomyCatalogChanged = onAnatomyCatalogChanged
             self.onStructureSelected = onStructureSelected
+        }
+
+        deinit {
+            lifecycleObservers.forEach(NotificationCenter.default.removeObserver)
+        }
+
+        func attach(to view: SCNView) {
+            sceneView = view
+            guard lifecycleObservers.isEmpty else { return }
+            let center = NotificationCenter.default
+            let notifications = [
+                UIApplication.didEnterBackgroundNotification,
+                UIApplication.willTerminateNotification
+            ]
+            lifecycleObservers = notifications.map { notification in
+                center.addObserver(
+                    forName: notification,
+                    object: nil,
+                    queue: .main
+                ) { [weak self] _ in
+                    self?.persistCurrentCameraState()
+                }
+            }
+        }
+
+        func persistCurrentCameraState() {
+            guard
+                let sceneView,
+                let lastLayer,
+                let state = TwinCameraState(view: sceneView)
+            else { return }
+            cameraStates[lastLayer] = state
+            TwinCameraStateStore.save(
+                state,
+                profileID: profileID,
+                layer: lastLayer
+            )
         }
 
         @objc func handleTap(_ recognizer: UITapGestureRecognizer) {
@@ -329,6 +498,13 @@ struct TwinSceneView: UIViewRepresentable {
         coordinator.onAnatomyCatalogChanged?(catalog)
     }
 
+    static func dismantleUIView(
+        _ uiView: SCNView,
+        coordinator: Coordinator
+    ) {
+        coordinator.persistCurrentCameraState()
+    }
+
     private func applyAnatomyDisplay(
         in view: SCNView,
         selection: AnatomySelection?,
@@ -355,7 +531,7 @@ struct TwinSceneView: UIViewRepresentable {
         profile: TwinProfile,
         layer: TwinBodyLayer,
         coordinator: Coordinator,
-        cameraState: Coordinator.CameraState?
+        cameraState: TwinCameraState?
     ) {
         let scene = SCNScene()
         scene.rootNode.addChildNode(
@@ -411,10 +587,10 @@ struct TwinSceneView: UIViewRepresentable {
         view.scene = scene
         view.pointOfView = camera
         view.defaultCameraController.target =
-            cameraState?.target ?? SCNVector3(0, 0.02, 0)
+            cameraState?.sceneTarget ?? SCNVector3(0, 0.02, 0)
         if let cameraState {
-            camera.transform = cameraState.transform
-            camera.camera?.fieldOfView = cameraState.fieldOfView
+            camera.transform = cameraState.sceneTransform
+            camera.camera?.fieldOfView = CGFloat(cameraState.fieldOfView)
             camera.camera?.orthographicScale = cameraState.orthographicScale
         }
     }

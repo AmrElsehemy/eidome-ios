@@ -26,8 +26,8 @@ fi
 
 grep -Eq '"filename"[[:space:]]*:[[:space:]]*"AppIcon\.png"' Eidome/Assets.xcassets/AppIcon.appiconset/Contents.json
 grep -q 'NSPrivacyAccessedAPICategoryUserDefaults' "$MANIFEST"
-test "$(grep -c 'MARKETING_VERSION = 0.0.12;' "$PROJECT")" -eq 2
-test "$(grep -c 'CURRENT_PROJECT_VERSION = 12;' "$PROJECT")" -eq 2
+test "$(grep -c 'MARKETING_VERSION = 0.0.15;' "$PROJECT")" -eq 2
+test "$(grep -c 'CURRENT_PROJECT_VERSION = 15;' "$PROJECT")" -eq 2
 test "$(grep -c 'eidome-anatomy.usdz in Resources' "$PROJECT")" -eq 2
 ruby -rjson -e '
   manifest = JSON.parse(File.read(ARGV.fetch(0)))
@@ -40,6 +40,10 @@ grep -q 'Export model and licence notice' "$ACKNOWLEDGEMENTS"
 grep -q 'makeAnatomyExportItems' "$ACKNOWLEDGEMENTS"
 grep -q 'Eidome modifications' "$THIRD_PARTY_NOTICE"
 grep -q 'unrestricted copy path' "$THIRD_PARTY_NOTICE"
+grep -q 'TwinCameraStateStore' Eidome/Body/TwinSceneView.swift
+grep -q 'didEnterBackgroundNotification' Eidome/Body/TwinSceneView.swift
+grep -q 'Guideline 2.1' fastlane/metadata/review_information/notes.txt
+grep -q 'Physical-device recording' fastlane/metadata/review_information/notes.txt
 ruby -c fastlane/Fastfile
 
 required_metadata=(

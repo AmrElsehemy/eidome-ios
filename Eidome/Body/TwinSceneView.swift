@@ -35,7 +35,7 @@ enum TwinBodyLayer: String, CaseIterable, Identifiable, Hashable {
         case .body: "Personalized estimate"
         case .muscles: "Reference muscles · height-scaled estimate"
         case .skeleton: "Reference skeleton · estimated proportions"
-        case .joints: "Reference joint map · estimated positions"
+        case .joints: "Reference skeleton · estimated joint positions"
         }
     }
 }
@@ -195,6 +195,8 @@ struct AnatomySelection: Identifiable, Equatable {
         case .skeleton:
             if normalizedName.contains("cartilage") { return "Cartilage" }
             return "Bone"
+        case .joints:
+            return "Joint landmark"
         default:
             return "Anatomical structure"
         }
@@ -222,6 +224,9 @@ struct AnatomySelection: Identifiable, Equatable {
         } else if nodeName.hasPrefix("EidomeSkeleton_") {
             prefix = "EidomeSkeleton_"
             layer = .skeleton
+        } else if nodeName.hasPrefix("EidomeJoint_") {
+            prefix = "EidomeJoint_"
+            layer = .joints
         } else {
             return nil
         }
@@ -618,7 +623,7 @@ struct TwinSceneView: UIViewRepresentable {
             )
                 ?? makeSkeletonBody(for: profile)
         case .joints:
-            makeJointBody(for: profile)
+            makeJointBody(for: profile, coordinator: coordinator)
         }
     }
 
@@ -936,30 +941,88 @@ struct TwinSceneView: UIViewRepresentable {
         return root
     }
 
-    private func makeJointBody(for profile: TwinProfile) -> SCNNode {
+    private func makeJointBody(
+        for profile: TwinProfile,
+        coordinator: Coordinator
+    ) -> SCNNode {
         let g = BodyGeometry(profile: profile)
         let p = bodyPositions(g)
-        let root = makeExteriorBody(for: profile, material: translucentMaterial(), jointMaterial: translucentMaterial())
+        let root = SCNNode()
+
+        if let skeleton = makeBundledAnatomy(
+            for: profile,
+            rootName: "EidomeSkeleton",
+            coordinator: coordinator
+        ) {
+            // Joint mode uses the licensed reference skeleton for spatial context,
+            // but only the landmark overlays should be selectable in this mode.
+            skeleton.enumerateChildNodes { node, _ in
+                if let name = node.name, name.hasPrefix("EidomeSkeleton_") {
+                    node.name = "JointContext_" + name
+                }
+                if let geometry = node.geometry?.copy() as? SCNGeometry {
+                    geometry.materials = geometry.materials.compactMap {
+                        ($0.copy() as? SCNMaterial).map { material in
+                            material.transparency = min(material.transparency, 0.52)
+                            return material
+                        }
+                    }
+                    node.geometry = geometry
+                }
+            }
+            root.addChildNode(skeleton)
+        } else {
+            let skeleton = makeSkeletonBody(for: profile)
+            skeleton.opacity = 0.48
+            root.addChildNode(skeleton)
+        }
+
+        let markers = SCNNode()
+        markers.name = "EidomeJointLandmarks"
+        markers.eulerAngles.y = -.pi / 12
         let joint = jointHighlightMaterial()
         let elbowY = p.shoulderY - g.armLength * 0.48
         let wristY = p.shoulderY - g.armLength * 0.94
         let kneeY = p.floorY + g.legLength * 0.48
 
-        addSphere(to: root, radius: g.totalHeight * 0.020, at: SCNVector3(0, p.neckY, 0), material: joint)
-        addSphere(to: root, radius: g.totalHeight * 0.022, at: SCNVector3(0, p.hipY + g.torsoHeight * 0.38, 0), material: joint)
-        for side: Float in [-1, 1] {
-            for point in [
-                SCNVector3(side * p.armX, p.shoulderY, 0),
-                SCNVector3(side * p.armX, elbowY, 0),
-                SCNVector3(side * p.armX, wristY, 0),
-                SCNVector3(side * p.legX, p.hipY, 0),
-                SCNVector3(side * p.legX, kneeY, 0),
-                SCNVector3(side * p.legX, p.floorY, 0)
-            ] {
-                addSphere(to: root, radius: g.totalHeight * 0.026, at: point, material: joint)
+        // When viewed from the front, the person's left appears on screen right.
+        for (sideValue, suffix) in [(Float(1), "L"), (Float(-1), "R")] {
+            let landmarks: [(String, SCNVector3)] = [
+                ("Shoulder", SCNVector3(sideValue * p.armX, p.shoulderY, 0)),
+                ("Elbow", SCNVector3(sideValue * p.armX, elbowY, 0)),
+                ("Wrist", SCNVector3(sideValue * p.armX, wristY, 0)),
+                ("Hip", SCNVector3(sideValue * p.legX, p.hipY, 0)),
+                ("Knee", SCNVector3(sideValue * p.legX, kneeY, 0)),
+                ("Ankle", SCNVector3(sideValue * p.legX, p.floorY + g.totalHeight * 0.025, 0))
+            ]
+            for (name, point) in landmarks {
+                addJointMarker(
+                    to: markers,
+                    name: "EidomeJoint_\(name)_\(suffix)",
+                    radius: g.totalHeight * 0.027,
+                    at: point,
+                    material: joint
+                )
             }
         }
+        root.addChildNode(markers)
         return root
+    }
+
+    private func addJointMarker(
+        to root: SCNNode,
+        name: String,
+        radius: Float,
+        at position: SCNVector3,
+        material: SCNMaterial
+    ) {
+        let geometry = SCNSphere(radius: CGFloat(radius))
+        geometry.segmentCount = 32
+        geometry.firstMaterial = material
+        let node = SCNNode(geometry: geometry)
+        node.name = name
+        node.position = position
+        root.addChildNode(node)
     }
 
     private func bodyPositions(_ g: BodyGeometry) -> (

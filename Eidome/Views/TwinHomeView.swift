@@ -176,7 +176,7 @@ struct TwinHomeView: View {
             .id(profile.id)
 
             HStack(spacing: 10) {
-                Text(selectedMode == .anatomy
+                Text(selectedMode == .anatomy || selectedMode == .joints
                      ? "Tap a structure · Drag to rotate · Pinch to zoom"
                      : "Drag to rotate · Pinch to zoom")
                     .font(.caption)
@@ -211,7 +211,7 @@ struct TwinHomeView: View {
 
             whyThisMattersCard(profile)
 
-            if selectedMode == .anatomy {
+            if selectedMode == .anatomy || selectedMode == .joints {
                 anatomyBrowseCard
             }
 
@@ -239,9 +239,9 @@ struct TwinHomeView: View {
             }
 
             if let selectedStructure {
-                anatomySelectionCard(selectedStructure)
+                anatomySelectionCard(selectedStructure, profile: profile)
                     .transition(.move(edge: .top).combined(with: .opacity))
-            } else if selectedMode == .anatomy {
+            } else if selectedMode == .anatomy || selectedMode == .joints {
                 anatomyEmptyState
             }
 
@@ -365,8 +365,8 @@ struct TwinHomeView: View {
                         .font(.subheadline.bold())
                     Text(
                         availableStructures.isEmpty
-                            ? "Loading this anatomy layer…"
-                            : "\(availableStructures.count) named reference structures"
+                            ? "Loading this reference layer…"
+                            : "\(availableStructures.count) named \(selectedMode == .joints ? "joint landmarks" : "reference structures")"
                     )
                     .font(.caption2)
                     .foregroundStyle(EidomeTheme.secondaryText)
@@ -391,7 +391,9 @@ struct TwinHomeView: View {
         HStack(spacing: 10) {
             Image(systemName: "hand.tap")
                 .foregroundStyle(EidomeTheme.cyan)
-            Text("Tap the model or browse the structure list to identify and isolate anatomy.")
+            Text(selectedMode == .joints
+                 ? "Tap a joint marker or browse the list to connect a landmark with movement data."
+                 : "Tap the model or browse the structure list to identify and isolate anatomy.")
                 .font(.caption)
                 .foregroundStyle(EidomeTheme.secondaryText)
             Spacer()
@@ -556,10 +558,15 @@ struct TwinHomeView: View {
         isShowingAnatomyBrowser = false
     }
 
-    private func anatomySelectionCard(_ selection: AnatomySelection) -> some View {
+    private func anatomySelectionCard(
+        _ selection: AnatomySelection,
+        profile: TwinProfile
+    ) -> some View {
         VStack(spacing: 12) {
             HStack(spacing: 12) {
-                Image(systemName: selection.layer == .muscles ? "figure.strengthtraining.traditional" : "viewfinder")
+                Image(systemName: selection.layer == .muscles
+                      ? "figure.strengthtraining.traditional"
+                      : selection.layer == .joints ? "circle.grid.cross" : "viewfinder")
                     .font(.title3)
                     .foregroundStyle(selection.layer == .muscles ? Color.red.opacity(0.85) : EidomeTheme.cyan)
                     .frame(width: 40, height: 40)
@@ -574,7 +581,9 @@ struct TwinHomeView: View {
                         .joined(separator: " · "))
                         .font(.caption2)
                         .foregroundStyle(EidomeTheme.secondaryText)
-                    Text("Reference anatomy · not measured")
+                    Text(selection.layer == .joints
+                         ? "Estimated landmark · entered ranges shown below"
+                         : "Reference anatomy · not measured")
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(EidomeTheme.cyan)
                 }
@@ -618,19 +627,23 @@ struct TwinHomeView: View {
                     : "Dims surrounding anatomy to make this structure easier to inspect."
             )
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Understand this selection").font(.caption.bold())
-                Text(anatomyExplanation(selection))
-                    .font(.caption)
-                    .foregroundStyle(EidomeTheme.secondaryText)
-                Text("This reference cannot tell you your muscle strength, tissue health or cause of pain.")
-                    .font(.caption2)
-                    .foregroundStyle(EidomeTheme.secondaryText)
-                Link("Anatomy reference: OpenStax §11.6",
-                     destination: URL(string: "https://openstax.org/books/anatomy-and-physiology-2e/pages/11-6-appendicular-muscles-of-the-pelvic-girdle-and-lower-limbs")!)
-                    .font(.caption2)
+            if selection.layer == .joints {
+                jointSelectionDetails(selection, profile: profile)
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Understand this selection").font(.caption.bold())
+                    Text(anatomyExplanation(selection))
+                        .font(.caption)
+                        .foregroundStyle(EidomeTheme.secondaryText)
+                    Text("This reference cannot tell you your muscle strength, tissue health or cause of pain.")
+                        .font(.caption2)
+                        .foregroundStyle(EidomeTheme.secondaryText)
+                    Link("Anatomy reference: OpenStax §11.6",
+                         destination: URL(string: "https://openstax.org/books/anatomy-and-physiology-2e/pages/11-6-appendicular-muscles-of-the-pelvic-girdle-and-lower-limbs")!)
+                        .font(.caption2)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
 
             if selection.category == "Fascia" {
                 Button {
@@ -654,6 +667,96 @@ struct TwinHomeView: View {
         .padding(14)
         .glassCard()
         .padding(.horizontal, 20)
+    }
+
+    @ViewBuilder
+    private func jointSelectionDetails(
+        _ selection: AnatomySelection,
+        profile: TwinProfile
+    ) -> some View {
+        let detail = jointDetail(selection, mobility: profile.mobilityProfile)
+
+        VStack(alignment: .leading, spacing: 9) {
+            Text("Movement context").font(.caption.bold())
+            Text(detail.movement)
+                .font(.caption)
+                .foregroundStyle(EidomeTheme.secondaryText)
+            HStack {
+                Text(detail.measurementLabel)
+                    .font(.caption)
+                Spacer()
+                Text(detail.value)
+                    .font(.caption.bold().monospacedDigit())
+                    .foregroundStyle(detail.isMeasured ? EidomeTheme.cyan : EidomeTheme.secondaryText)
+            }
+            Text("Entered mobility is self-reported measurement data. It is not a diagnosis or a normal-range assessment.")
+                .font(.caption2)
+                .foregroundStyle(EidomeTheme.secondaryText)
+
+            Button {
+                isEditingMobility = true
+            } label: {
+                Label("Add or update mobility", systemImage: "ruler")
+                    .font(.caption.bold())
+                    .foregroundStyle(EidomeTheme.cyan)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 9)
+                    .background(EidomeTheme.cyan.opacity(0.10), in: RoundedRectangle(cornerRadius: 10))
+            }
+            .buttonStyle(.plain)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func jointDetail(
+        _ selection: AnatomySelection,
+        mobility: MobilityProfile?
+    ) -> (movement: String, measurementLabel: String, value: String, isMeasured: Bool) {
+        let name = selection.name.lowercased()
+        let side = selection.side
+        let value: Double?
+        let movement: String
+        let measurementLabel: String
+
+        if name.contains("ankle") {
+            movement = "The ankle supports dorsiflexion and plantar flexion as the foot moves relative to the lower leg."
+            measurementLabel = "Entered ankle dorsiflexion"
+            value = side == .left
+                ? mobility?.leftAnkleDorsiflexion
+                : mobility?.rightAnkleDorsiflexion
+        } else if name.contains("hip") {
+            movement = "The hip supports flexion, extension, rotation and movement toward or away from the midline."
+            measurementLabel = "Entered hip internal rotation"
+            value = side == .left
+                ? mobility?.leftHipInternalRotation
+                : mobility?.rightHipInternalRotation
+        } else if name.contains("shoulder") {
+            movement = "The shoulder complex supports raising, lowering and rotating the arm through several coordinated joints."
+            measurementLabel = "Entered shoulder flexion"
+            value = side == .left
+                ? mobility?.leftShoulderFlexion
+                : mobility?.rightShoulderFlexion
+        } else if name.contains("elbow") {
+            movement = "The elbow primarily bends and straightens the arm; nearby joints also turn the forearm."
+            measurementLabel = "Mobility field"
+            value = nil
+        } else if name.contains("wrist") {
+            movement = "The wrist moves the hand forward, backward and side to side."
+            measurementLabel = "Mobility field"
+            value = nil
+        } else {
+            movement = "The knee primarily bends and straightens the leg, with limited rotation depending on position."
+            measurementLabel = "Mobility field"
+            value = nil
+        }
+
+        return (
+            movement,
+            measurementLabel,
+            value.map { $0.formatted(.number.precision(.fractionLength(0...1))) + "°" }
+                ?? "Not entered",
+            value != nil
+        )
     }
 
     private func anatomyExplanation(_ selection: AnatomySelection) -> String {
@@ -930,7 +1033,11 @@ private struct AnatomyBrowserSheet: View {
                     .listStyle(.insetGrouped)
                 }
             }
-            .navigationTitle(layer == .muscles ? "Muscle structures" : "Skeletal structures")
+            .navigationTitle(
+                layer == .muscles
+                    ? "Muscle structures"
+                    : layer == .joints ? "Joint landmarks" : "Skeletal structures"
+            )
             .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $searchText, prompt: "Search structures")
             .toolbar {

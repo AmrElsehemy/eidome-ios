@@ -11,7 +11,7 @@ Official domain: [eidome.com](https://eidome.com)
 3. Select an iPhone simulator or connected device.
 4. Run the `Eidome` scheme.
 
-Bundle identifier: `ai.knowlly.eidome`
+Bundle identifier: `ai.knowlly.eidome`\n\nApp Store version: `1.0` · Build: `15` · Internal milestone: `v0.15`
 
 ## v0.15 scope
 

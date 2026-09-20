@@ -326,9 +326,7 @@ struct TwinSceneView: UIViewRepresentable {
         guard catalogIDs != coordinator.lastAnatomyCatalogIDs else { return }
         coordinator.lastAnatomyCatalogIDs = catalogIDs
 
-        DispatchQueue.main.async {
-            coordinator.onAnatomyCatalogChanged?(catalog)
-        }
+        coordinator.onAnatomyCatalogChanged?(catalog)
     }
 
     private func applyAnatomyDisplay(

@@ -7,6 +7,7 @@ PROJECT="Eidome.xcodeproj/project.pbxproj"
 HUMAN_MODEL="Eidome/Resources/Models/eidome-human.usdz"
 ANATOMY_MODEL="Eidome/Resources/Models/eidome-anatomy.usdz"
 ANATOMY_MANIFEST="docs/asset-manifests/z-anatomy-v0.08.json"
+ANATOMY_CHECKSUM="docs/asset-manifests/eidome-anatomy.sha256"
 ACKNOWLEDGEMENTS="Eidome/Views/AppSettingsView.swift"
 THIRD_PARTY_NOTICE="THIRD_PARTY_ASSETS.md"
 
@@ -15,6 +16,8 @@ test -s "$MANIFEST"
 test -s "$HUMAN_MODEL"
 test -s "$ANATOMY_MODEL"
 test -s "$ANATOMY_MANIFEST"
+test -s "$ANATOMY_CHECKSUM"
+shasum -a 256 -c "$ANATOMY_CHECKSUM"
 plutil -lint "$MANIFEST"
 
 WIDTH=$(sips -g pixelWidth "$ICON" | awk '/pixelWidth/ {print $2}')
@@ -27,13 +30,24 @@ fi
 grep -Eq '"filename"[[:space:]]*:[[:space:]]*"AppIcon\.png"' Eidome/Assets.xcassets/AppIcon.appiconset/Contents.json
 grep -q 'NSPrivacyAccessedAPICategoryUserDefaults' "$MANIFEST"
 test "$(grep -Fc 'MARKETING_VERSION = 1.0;' "$PROJECT")" -eq 2
-test "$(grep -c 'CURRENT_PROJECT_VERSION = 18;' "$PROJECT")" -eq 2
+test "$(grep -c 'CURRENT_PROJECT_VERSION = 19;' "$PROJECT")" -eq 2
 test "$(grep -c 'eidome-anatomy.usdz in Resources' "$PROJECT")" -eq 2
 ruby -rjson -e '
   manifest = JSON.parse(File.read(ARGV.fetch(0)))
   abort "Unexpected Z-Anatomy revision" unless manifest["sourceRevision"] == "b9c9f98066e1e786814603b047c5bd3638c2a864"
   abort "Skeleton manifest is incomplete" unless manifest.dig("layers", "skeleton", "exportedObjects").to_i >= 277
   abort "Muscle manifest is incomplete" unless manifest.dig("layers", "muscles", "exportedObjects").to_i >= 120
+  names = manifest.dig("layers", "muscles", "sourceNames") || []
+  required_regions = {
+    "calf" => ["Lateral head of gastrocnemius.l", "Medial head of gastrocnemius.l", "Tibialis anterior muscle.l"],
+    "thigh" => ["Rectus femoris muscle.l", "Vastus lateralis muscle.l", "Semitendinosus muscle.l"],
+    "shoulder" => ["Acromial part of deltoid muscle.l", "Descending part of trapezius muscle.l"],
+    "forearm" => ["Brachioradialis muscle.l", "Extensor digitorum.l", "Humeral head of flexor carpi ulnaris.l"]
+  }
+  required_regions.each do |region, structures|
+    missing = structures - names
+    abort "Missing independently selectable #{region} structures: #{missing.join(", ")}" unless missing.empty?
+  end
 ' "$ANATOMY_MANIFEST"
 grep -q 'CC BY-SA 4.0' "$ACKNOWLEDGEMENTS"
 grep -q 'Export model and licence notice' "$ACKNOWLEDGEMENTS"

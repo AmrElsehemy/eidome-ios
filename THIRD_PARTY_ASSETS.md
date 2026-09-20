@@ -13,6 +13,7 @@ presented inside the app under About Eidome → Asset acknowledgements.
 - Adapted-work licence: Creative Commons Attribution-ShareAlike 4.0 International
 - Licence: https://creativecommons.org/licenses/by-sa/4.0/
 - Manifest: `docs/asset-manifests/z-anatomy-v0.08.json`
+- Bundled USDZ checksum: `docs/asset-manifests/eidome-anatomy.sha256`
 - Included export: 277 skeletal objects and 120 superficial muscle/fascia objects
 
 Required attribution:
@@ -35,6 +36,11 @@ Eidome modifications: selected the skeletal and superficial-muscle
 hierarchies; removed guide geometry; decimated meshes; normalized scale and
 coordinate frame; and converted the result to USDZ. No endorsement by the
 original authors or licensors is implied.
+
+Eidome v0.19 adds region and tissue filters over this same pinned derivative.
+The filters reveal independently named structures already present in the
+manifest; they do not add unlicensed geometry or claim that this superficial
+export contains every deep anatomical structure.
 
 The app offers the exact bundled USDZ together with a licence-and-attribution
 notice through the system share sheet. This preserves a practical,

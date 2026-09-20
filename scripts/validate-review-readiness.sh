@@ -30,7 +30,7 @@ fi
 grep -Eq '"filename"[[:space:]]*:[[:space:]]*"AppIcon\.png"' Eidome/Assets.xcassets/AppIcon.appiconset/Contents.json
 grep -q 'NSPrivacyAccessedAPICategoryUserDefaults' "$MANIFEST"
 test "$(grep -Fc 'MARKETING_VERSION = 1.0;' "$PROJECT")" -eq 2
-test "$(grep -c 'CURRENT_PROJECT_VERSION = 19;' "$PROJECT")" -eq 2
+test "$(grep -c 'CURRENT_PROJECT_VERSION = 20;' "$PROJECT")" -eq 2
 test "$(grep -c 'eidome-anatomy.usdz in Resources' "$PROJECT")" -eq 2
 ruby -rjson -e '
   manifest = JSON.parse(File.read(ARGV.fetch(0)))
@@ -56,6 +56,8 @@ grep -q 'Eidome modifications' "$THIRD_PARTY_NOTICE"
 grep -q 'unrestricted copy path' "$THIRD_PARTY_NOTICE"
 grep -q 'TwinCameraStateStore' Eidome/Body/TwinSceneView.swift
 grep -q 'didEnterBackgroundNotification' Eidome/Body/TwinSceneView.swift
+grep -q 'BodyMeasurementMetadata' Eidome/Models/TwinProfile.swift
+grep -q 'GuidedMeasurementSheet' Eidome/Views/TwinHomeView.swift
 grep -q 'Guideline 2.1' fastlane/metadata/review_information/notes.txt
 grep -q 'Physical-device recording' fastlane/metadata/review_information/notes.txt
 KNOWLEDGE_COUNT=$(grep -c '^[[:space:]]*\.init(pattern:' Eidome/Views/TwinHomeView.swift)

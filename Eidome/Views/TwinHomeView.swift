@@ -552,6 +552,8 @@ struct TwinHomeView: View {
         selectedStructure = nil
         focusedStructure = nil
         hiddenStructureIDs.removeAll()
+        availableStructures.removeAll()
+        isShowingAnatomyBrowser = false
     }
 
     private func anatomySelectionCard(_ selection: AnatomySelection) -> some View {
@@ -836,8 +838,9 @@ private struct AnatomyBrowserSheet: View {
 
     private var groupedStructures: [(category: String, values: [AnatomySelection])] {
         Dictionary(grouping: filteredStructures, by: \.category)
-            .map { category, values in
-                (
+            .map { entry in
+                let (category, values) = entry
+                return (
                     category,
                     values.sorted {
                         if $0.name != $1.name {

@@ -44,6 +44,7 @@ final class ProfileStore: ObservableObject {
     }
 
     func delete(_ profile: TwinProfile) {
+        TwinCameraStateStore.removeAll(profileID: profile.id)
         profiles.removeAll { $0.id == profile.id }
 
         if selectedProfileID == profile.id || selectedProfile == nil {
@@ -54,6 +55,7 @@ final class ProfileStore: ObservableObject {
     }
 
     func deleteAllData() {
+        TwinCameraStateStore.removeAll()
         profiles = []
         selectedProfileID = nil
 

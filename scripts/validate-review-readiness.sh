@@ -57,6 +57,10 @@ grep -q 'unrestricted copy path' "$THIRD_PARTY_NOTICE"
 grep -q 'TwinCameraStateStore' Eidome/Body/TwinSceneView.swift
 grep -q 'didEnterBackgroundNotification' Eidome/Body/TwinSceneView.swift
 grep -q 'BodyMeasurementMetadata' Eidome/Models/TwinProfile.swift
+grep -q 'case shoulderWidth = "shoulderWidth"' Eidome/Models/TwinProfile.swift
+grep -q 'case selfTape = "Self-measured tape"' Eidome/Models/TwinProfile.swift
+grep -q 'measurementMetadata\[kind.storageKey\]' Eidome/Views/TwinHomeView.swift
+grep -q 'arrow.up.and.down' Eidome/Views/TwinHomeView.swift
 grep -q 'GuidedMeasurementSheet' Eidome/Views/TwinHomeView.swift
 grep -q 'Guideline 2.1' fastlane/metadata/review_information/notes.txt
 grep -q 'Physical-device recording' fastlane/metadata/review_information/notes.txt

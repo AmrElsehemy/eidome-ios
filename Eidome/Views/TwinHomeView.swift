@@ -445,55 +445,13 @@ struct TwinHomeView: View {
             .frame(height: selectedMode == .body ? 380 : 420)
             .id(profile.id)
 
-            HStack(spacing: 8) {
-                Text(isSceneCameraControlEnabled
-                     ? "Drag to rotate · Pinch to zoom"
-                     : selectedMode == .anatomy || selectedMode == .joints
-                        ? "Tap a structure · Scroll normally"
-                        : "Scroll normally · Enable 3D controls to rotate")
-                    .font(.caption)
-                    .foregroundStyle(EidomeTheme.secondaryText)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-
-                Spacer(minLength: 4)
-
-                if isSceneCameraControlEnabled {
-                    Button {
-                        sceneResetToken += 1
-                    } label: {
-                        Image(systemName: "arrow.counterclockwise")
-                            .font(.caption.bold())
-                            .foregroundStyle(EidomeTheme.cyan)
-                            .frame(width: 38, height: 44)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Reset 3D view")
-
-                    Button("Done") {
-                        isSceneCameraControlEnabled = false
-                    }
-                    .font(.caption.bold())
-                    .foregroundStyle(EidomeTheme.cyan)
-                    .frame(minWidth: 44, minHeight: 44)
-                    .buttonStyle(.plain)
-                    .accessibilityHint("Returns vertical swipes to page scrolling.")
-                } else {
-                    Button {
-                        isSceneCameraControlEnabled = true
-                    } label: {
-                        Label("Rotate 3D", systemImage: "view.3d")
-                            .font(.caption.bold())
-                            .foregroundStyle(EidomeTheme.cyan)
-                            .frame(minHeight: 44)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityHint("Enables drag and pinch gestures on the model.")
-                }
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .background(EidomeTheme.panel.opacity(0.84), in: Capsule())
+            TwinSceneControlBar(
+                isCameraControlEnabled: $isSceneCameraControlEnabled,
+                idlePrompt: selectedMode == .anatomy || selectedMode == .joints
+                    ? "Tap a structure · Scroll normally"
+                    : "Scroll normally · Tap Rotate 3D to explore",
+                onReset: { sceneResetToken += 1 }
+            )
             .padding(.horizontal, 20)
 
             Label(selectedLayer.modelNote, systemImage: "circle.dashed")
@@ -1854,6 +1812,8 @@ private struct RefineTwinView: View {
     @State private var heightCentimeters: Double
     @State private var weightKilograms: Double
     @State private var selectedGuide: BodyMeasurementKind?
+    @State private var isSceneCameraControlEnabled = false
+    @State private var sceneResetToken = 0
 
     init(
         profile: TwinProfile,
@@ -1897,10 +1857,18 @@ private struct RefineTwinView: View {
                     VStack(spacing: 18) {
                         TwinSceneView(
                             profile: previewProfile,
-                            cameraStateScope: .refinePreview
+                            cameraStateScope: .refinePreview,
+                            allowsCameraControl: isSceneCameraControlEnabled,
+                            cameraResetToken: sceneResetToken
                         )
                             .frame(height: 300)
                             .accessibilityLabel("Live preview of \(profile.name)'s body model")
+
+                        TwinSceneControlBar(
+                            isCameraControlEnabled: $isSceneCameraControlEnabled,
+                            idlePrompt: "Scroll to edit body measurements",
+                            onReset: { sceneResetToken += 1 }
+                        )
 
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Shape \(profile.name)'s twin")

@@ -5,6 +5,8 @@ struct MobilityEditorView: View {
     @EnvironmentObject private var profileStore: ProfileStore
     let profile: TwinProfile
     @State private var mobility: MobilityProfile
+    @State private var isSceneCameraControlEnabled = false
+    @State private var sceneResetToken = 0
 
     init(profile: TwinProfile) {
         self.profile = profile
@@ -24,9 +26,17 @@ struct MobilityEditorView: View {
                         TwinSceneView(
                             profile: profile,
                             layer: .joints,
-                            cameraStateScope: .mobilityEditor
+                            cameraStateScope: .mobilityEditor,
+                            allowsCameraControl: isSceneCameraControlEnabled,
+                            cameraResetToken: sceneResetToken
                         )
                             .frame(height: 270)
+
+                        TwinSceneControlBar(
+                            isCameraControlEnabled: $isSceneCameraControlEnabled,
+                            idlePrompt: "Scroll to enter mobility measurements",
+                            onReset: { sceneResetToken += 1 }
+                        )
 
                         VStack(alignment: .leading, spacing: 6) {
                             Text("How \(profile.name) moves")

@@ -110,14 +110,88 @@ struct TwinCameraState: Codable, Equatable {
     }
 }
 
-enum TwinCameraStateStore {
-    private static let keyPrefix = "eidome.camera-state.v1"
+enum TwinCameraStateScope: String, Hashable {
+    case explorer
+    case refinePreview = "refine-preview"
+    case mobilityEditor = "mobility-editor"
+}
 
-    static func load(profileID: UUID, layer: TwinBodyLayer) -> TwinCameraState? {
-        let defaults = UserDefaults.standard
-        let storageKey = key(profileID: profileID, layer: layer)
+enum TwinCameraStateStore {
+    private static let keyPrefix = "eidome.camera-state.v2"
+    private static let legacyKeyPrefix = "eidome.camera-state.v1"
+
+    static func load(
+        profileID: UUID,
+        layer: TwinBodyLayer,
+        scope: TwinCameraStateScope
+    ) -> TwinCameraState? {
+        if let state = decodeState(forKey: key(profileID: profileID, layer: layer, scope: scope)) {
+            return state
+        }
+
         guard
-            let data = defaults.data(forKey: storageKey),
+            scope == .explorer,
+            let legacyState = decodeState(forKey: legacyKey(profileID: profileID, layer: layer))
+        else {
+            return nil
+        }
+
+        save(legacyState, profileID: profileID, layer: layer, scope: scope)
+        UserDefaults.standard.removeObject(forKey: legacyKey(profileID: profileID, layer: layer))
+        return legacyState
+    }
+
+    static func save(
+        _ state: TwinCameraState,
+        profileID: UUID,
+        layer: TwinBodyLayer,
+        scope: TwinCameraStateScope
+    ) {
+        guard state.isSafe, let data = try? JSONEncoder().encode(state) else { return }
+        UserDefaults.standard.set(
+            data,
+            forKey: key(profileID: profileID, layer: layer, scope: scope)
+        )
+    }
+
+    static func remove(
+        profileID: UUID,
+        layer: TwinBodyLayer,
+        scope: TwinCameraStateScope
+    ) {
+        let defaults = UserDefaults.standard
+        defaults.removeObject(forKey: key(profileID: profileID, layer: layer, scope: scope))
+        if scope == .explorer {
+            defaults.removeObject(forKey: legacyKey(profileID: profileID, layer: layer))
+        }
+    }
+
+    static func removeAll(profileID: UUID) {
+        removeKeys(withPrefix: "\(keyPrefix).\(profileID.uuidString).")
+        removeKeys(withPrefix: "\(legacyKeyPrefix).\(profileID.uuidString).")
+    }
+
+    static func removeAll() {
+        removeKeys(withPrefix: "\(keyPrefix).")
+        removeKeys(withPrefix: "\(legacyKeyPrefix).")
+    }
+
+    private static func key(
+        profileID: UUID,
+        layer: TwinBodyLayer,
+        scope: TwinCameraStateScope
+    ) -> String {
+        "\(keyPrefix).\(profileID.uuidString).\(scope.rawValue).\(layer.rawValue.lowercased())"
+    }
+
+    private static func legacyKey(profileID: UUID, layer: TwinBodyLayer) -> String {
+        "\(legacyKeyPrefix).\(profileID.uuidString).\(layer.rawValue.lowercased())"
+    }
+
+    private static func decodeState(forKey storageKey: String) -> TwinCameraState? {
+        let defaults = UserDefaults.standard
+        guard let data = defaults.data(forKey: storageKey) else { return nil }
+        guard
             let state = try? JSONDecoder().decode(TwinCameraState.self, from: data),
             state.isSafe
         else {
@@ -127,32 +201,6 @@ enum TwinCameraStateStore {
         return state
     }
 
-    static func save(
-        _ state: TwinCameraState,
-        profileID: UUID,
-        layer: TwinBodyLayer
-    ) {
-        guard state.isSafe, let data = try? JSONEncoder().encode(state) else { return }
-        UserDefaults.standard.set(data, forKey: key(profileID: profileID, layer: layer))
-    }
-
-    static func remove(profileID: UUID, layer: TwinBodyLayer) {
-        UserDefaults.standard.removeObject(forKey: key(profileID: profileID, layer: layer))
-    }
-
-    static func removeAll(profileID: UUID) {
-        let prefix = "\(keyPrefix).\(profileID.uuidString)."
-        removeKeys(withPrefix: prefix)
-    }
-
-    static func removeAll() {
-        removeKeys(withPrefix: "\(keyPrefix).")
-    }
-
-    private static func key(profileID: UUID, layer: TwinBodyLayer) -> String {
-        "\(keyPrefix).\(profileID.uuidString).\(layer.rawValue.lowercased())"
-    }
-
     private static func removeKeys(withPrefix prefix: String) {
         let defaults = UserDefaults.standard
         defaults.dictionaryRepresentation().keys
@@ -160,7 +208,6 @@ enum TwinCameraStateStore {
             .forEach { defaults.removeObject(forKey: $0) }
     }
 }
-
 
 struct AnatomySelection: Identifiable, Equatable {
     enum Side: String {
@@ -270,6 +317,7 @@ struct AnatomySelection: Identifiable, Equatable {
 struct TwinSceneView: UIViewRepresentable {
     let profile: TwinProfile
     var layer: TwinBodyLayer = .body
+    var cameraStateScope: TwinCameraStateScope = .explorer
     var focusedStructure: AnatomySelection? = nil
     var hiddenStructureIDs: Set<String> = []
     var cameraResetToken: Int = 0
@@ -279,6 +327,7 @@ struct TwinSceneView: UIViewRepresentable {
     func makeCoordinator() -> Coordinator {
         Coordinator(
             profileID: profile.id,
+            cameraStateScope: cameraStateScope,
             onAnatomyCatalogChanged: onAnatomyCatalogChanged,
             onStructureSelected: onStructureSelected
         )
@@ -301,7 +350,8 @@ struct TwinSceneView: UIViewRepresentable {
         view.addGestureRecognizer(tapRecognizer)
         let restoredCameraState = TwinCameraStateStore.load(
             profileID: profile.id,
-            layer: layer
+            layer: layer,
+            scope: cameraStateScope
         )
         context.coordinator.cameraStates[layer] = restoredCameraState
         configureScene(
@@ -343,7 +393,8 @@ struct TwinSceneView: UIViewRepresentable {
                 TwinCameraStateStore.save(
                     state,
                     profileID: profile.id,
-                    layer: previousLayer
+                    layer: previousLayer,
+                    scope: cameraStateScope
                 )
             } else if !isSameProfile {
                 context.coordinator.cameraStates.removeAll()
@@ -352,7 +403,11 @@ struct TwinSceneView: UIViewRepresentable {
             let restoredCameraState = resetsCamera
                 ? nil
                 : context.coordinator.cameraStates[layer]
-                    ?? TwinCameraStateStore.load(profileID: profile.id, layer: layer)
+                    ?? TwinCameraStateStore.load(
+                        profileID: profile.id,
+                        layer: layer,
+                        scope: cameraStateScope
+                    )
             configureScene(
                 in: view,
                 profile: profile,
@@ -362,7 +417,11 @@ struct TwinSceneView: UIViewRepresentable {
             )
             if resetsCamera {
                 context.coordinator.cameraStates[layer] = nil
-                TwinCameraStateStore.remove(profileID: profile.id, layer: layer)
+                TwinCameraStateStore.remove(
+                    profileID: profile.id,
+                    layer: layer,
+                    scope: cameraStateScope
+                )
             }
             context.coordinator.lastProfile = profile
             context.coordinator.lastLayer = layer
@@ -385,6 +444,7 @@ struct TwinSceneView: UIViewRepresentable {
 
     final class Coordinator: NSObject {
         let profileID: UUID
+        let cameraStateScope: TwinCameraStateScope
         weak var sceneView: SCNView?
         var lifecycleObservers: [NSObjectProtocol] = []
         var lastProfile: TwinProfile?
@@ -403,10 +463,12 @@ struct TwinSceneView: UIViewRepresentable {
 
         init(
             profileID: UUID,
+            cameraStateScope: TwinCameraStateScope,
             onAnatomyCatalogChanged: (([AnatomySelection]) -> Void)?,
             onStructureSelected: ((AnatomySelection) -> Void)?
         ) {
             self.profileID = profileID
+            self.cameraStateScope = cameraStateScope
             self.onAnatomyCatalogChanged = onAnatomyCatalogChanged
             self.onStructureSelected = onStructureSelected
         }
@@ -444,7 +506,8 @@ struct TwinSceneView: UIViewRepresentable {
             TwinCameraStateStore.save(
                 state,
                 profileID: profileID,
-                layer: lastLayer
+                layer: lastLayer,
+                scope: cameraStateScope
             )
         }
 

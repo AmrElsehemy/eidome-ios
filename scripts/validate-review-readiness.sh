@@ -55,6 +55,14 @@ grep -q 'makeAnatomyExportItems' "$ACKNOWLEDGEMENTS"
 grep -q 'Eidome modifications' "$THIRD_PARTY_NOTICE"
 grep -q 'unrestricted copy path' "$THIRD_PARTY_NOTICE"
 grep -q 'TwinCameraStateStore' Eidome/Body/TwinSceneView.swift
+grep -q 'eidome.camera-state.v2' Eidome/Body/TwinSceneView.swift
+grep -q 'case refinePreview = "refine-preview"' Eidome/Body/TwinSceneView.swift
+grep -q 'case mobilityEditor = "mobility-editor"' Eidome/Body/TwinSceneView.swift
+grep -q 'cameraStateScope: .explorer' Eidome/Views/TwinHomeView.swift
+grep -q 'cameraStateScope: .refinePreview' Eidome/Views/TwinHomeView.swift
+grep -q 'cameraStateScope: .mobilityEditor' Eidome/Views/MobilityEditorView.swift
+grep -q 'guard selectedMode == .anatomy else { return availableStructures }' Eidome/Views/TwinHomeView.swift
+grep -q 'BodyMeasurementKind.allCases.filter' Eidome/Views/TwinHomeView.swift
 grep -q 'didEnterBackgroundNotification' Eidome/Body/TwinSceneView.swift
 grep -q 'BodyMeasurementMetadata' Eidome/Models/TwinProfile.swift
 grep -q 'case shoulderWidth = "shoulderWidth"' Eidome/Models/TwinProfile.swift

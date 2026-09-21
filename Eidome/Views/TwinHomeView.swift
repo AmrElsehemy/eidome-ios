@@ -261,7 +261,7 @@ struct TwinHomeView: View {
     @State private var isSceneCameraControlEnabled = false
     @State private var isEditingMobility = false
     @State private var isShowingSettings = false
-    @State private var isShowingExplorerHelp = false
+    @State private var explorerHelpProfile: TwinProfile?
     @State private var selectedStructure: AnatomySelection?
     @State private var focusedStructure: AnatomySelection?
     @State private var hiddenStructureIDs: Set<String> = []
@@ -327,10 +327,8 @@ struct TwinHomeView: View {
                 }
             }
         }
-        .sheet(isPresented: $isShowingExplorerHelp) {
-            if let profile = profileStore.selectedProfile {
-                explorerHelpSheet(profile)
-            }
+        .sheet(item: $explorerHelpProfile) { profile in
+            explorerHelpSheet(profile)
         }
     }
 
@@ -568,7 +566,7 @@ struct TwinHomeView: View {
             Spacer()
 
             Button {
-                isShowingExplorerHelp = true
+                explorerHelpProfile = profileStore.selectedProfile
             } label: {
                 Image(systemName: "questionmark.circle")
                     .font(.headline)
@@ -875,7 +873,7 @@ struct TwinHomeView: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
-                        isShowingExplorerHelp = false
+                        explorerHelpProfile = nil
                     }
                     .foregroundStyle(EidomeTheme.cyan)
                 }

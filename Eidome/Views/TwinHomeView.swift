@@ -379,13 +379,15 @@ struct TwinHomeView: View {
     }
 
     private var filteredAvailableStructures: [AnatomySelection] {
-        availableStructures.filter { structure in
+        guard selectedMode == .anatomy else { return availableStructures }
+        return availableStructures.filter { structure in
             anatomyRegion.contains(structure)
                 && (selectedLayer != .muscles || anatomyDetailFilter.contains(structure))
         }
     }
 
     private var sceneHiddenStructureIDs: Set<String> {
+        guard selectedMode == .anatomy else { return hiddenStructureIDs }
         let filteredOut = availableStructures
             .filter { !filteredAvailableStructures.contains($0) }
             .map(\.id)
@@ -408,6 +410,7 @@ struct TwinHomeView: View {
             TwinSceneView(
                 profile: profile,
                 layer: selectedLayer,
+                cameraStateScope: .explorer,
                 focusedStructure: focusedStructure,
                 hiddenStructureIDs: sceneHiddenStructureIDs,
                 cameraResetToken: sceneResetToken,
@@ -1675,17 +1678,9 @@ private struct RefineTwinView: View {
     }
 
     private var invalidFieldCount: Int {
-        let optionalMeasurementErrors = [
-            (measurements.shoulderWidthCentimeters, 20.0...70.0),
-            (measurements.chestCircumferenceCentimeters, 40.0...180.0),
-            (measurements.waistCircumferenceCentimeters, 35.0...180.0),
-            (measurements.hipCircumferenceCentimeters, 40.0...180.0),
-            (measurements.inseamCentimeters, 35.0...130.0),
-            (measurements.thighCircumferenceCentimeters, 20.0...100.0),
-            (measurements.calfCircumferenceCentimeters, 15.0...70.0)
-        ].filter { entry in
-            guard let value = entry.0 else { return false }
-            return !entry.1.contains(value)
+        let optionalMeasurementErrors = BodyMeasurementKind.allCases.filter { kind in
+            guard let value = measurements[keyPath: kind.keyPath] else { return false }
+            return !kind.validCentimeterRange.contains(value)
         }.count
 
         let requiredMetricErrors = [
@@ -1702,7 +1697,10 @@ private struct RefineTwinView: View {
                 EidomeTheme.backgroundGradient.ignoresSafeArea()
                 ScrollView {
                     VStack(spacing: 18) {
-                        TwinSceneView(profile: previewProfile)
+                        TwinSceneView(
+                            profile: previewProfile,
+                            cameraStateScope: .refinePreview
+                        )
                             .frame(height: 300)
                             .accessibilityLabel("Live preview of \(profile.name)'s body model")
 

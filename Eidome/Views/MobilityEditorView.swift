@@ -21,7 +21,11 @@ struct MobilityEditorView: View {
                 EidomeTheme.backgroundGradient.ignoresSafeArea()
                 ScrollView {
                     VStack(spacing: 18) {
-                        TwinSceneView(profile: profile, layer: .joints)
+                        TwinSceneView(
+                            profile: profile,
+                            layer: .joints,
+                            cameraStateScope: .mobilityEditor
+                        )
                             .frame(height: 270)
 
                         VStack(alignment: .leading, spacing: 6) {

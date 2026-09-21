@@ -180,17 +180,7 @@ private enum AnatomyDetailFilter: String, CaseIterable, Identifiable {
     }
 }
 
-private enum BodyMeasurementKind: String, CaseIterable, Identifiable {
-    case shoulderWidth
-    case chestCircumference
-    case waistCircumference
-    case hipCircumference
-    case inseam
-    case thighCircumference
-    case calfCircumference
-
-    var id: String { rawValue }
-
+private extension BodyMeasurementKind {
     var title: String {
         switch self {
         case .shoulderWidth: "Shoulder width"
@@ -1011,31 +1001,31 @@ struct TwinHomeView: View {
         if name.contains("shoulder") {
             value = measurements?.shoulderWidthCentimeters
             effect = "Adjusts shoulder breadth relative to the torso."
-            metadataKey = BodyMeasurementKind.shoulderWidth.rawValue
+            metadataKey = BodyMeasurementKind.shoulderWidth.storageKey
         } else if name.contains("chest") {
             value = measurements?.chestCircumferenceCentimeters
             effect = "Refines chest width and depth instead of relying only on height and weight."
-            metadataKey = BodyMeasurementKind.chestCircumference.rawValue
+            metadataKey = BodyMeasurementKind.chestCircumference.storageKey
         } else if name.contains("waist") {
             value = measurements?.waistCircumferenceCentimeters
             effect = "Refines the waist region of the exterior body estimate."
-            metadataKey = BodyMeasurementKind.waistCircumference.rawValue
+            metadataKey = BodyMeasurementKind.waistCircumference.storageKey
         } else if name.contains("hip") {
             value = measurements?.hipCircumferenceCentimeters
             effect = "Refines hip width and depth in the exterior estimate."
-            metadataKey = BodyMeasurementKind.hipCircumference.rawValue
+            metadataKey = BodyMeasurementKind.hipCircumference.storageKey
         } else if name.contains("inseam") {
             value = measurements?.inseamCentimeters
             effect = "Adjusts the model's leg-to-torso proportion."
-            metadataKey = BodyMeasurementKind.inseam.rawValue
+            metadataKey = BodyMeasurementKind.inseam.storageKey
         } else if name.contains("thigh") {
             value = measurements?.thighCircumferenceCentimeters
             effect = "Refines upper-leg volume while preserving overall height."
-            metadataKey = BodyMeasurementKind.thighCircumference.rawValue
+            metadataKey = BodyMeasurementKind.thighCircumference.storageKey
         } else {
             value = measurements?.calfCircumferenceCentimeters
             effect = "Refines lower-leg volume while preserving overall height."
-            metadataKey = BodyMeasurementKind.calfCircumference.rawValue
+            metadataKey = BodyMeasurementKind.calfCircumference.storageKey
         }
 
         let isEntered = value != nil
@@ -1044,7 +1034,7 @@ struct TwinHomeView: View {
             value.map { $0.formatted(.number.precision(.fractionLength(0...1))) + " cm" }
                 ?? "Not entered",
             isEntered
-                ? metadata.map { "Entered · \($0.method.rawValue) · \($0.confidence.rawValue) confidence" }
+                ? metadata.map { "Entered · \($0.method.displayName) · \($0.confidence.displayName) confidence" }
                     ?? "Entered measurement"
                 : "Estimated from profile inputs",
             isEntered
@@ -1753,7 +1743,7 @@ private struct RefineTwinView: View {
                                 MeasurementSummaryRow(
                                     kind: kind,
                                     valueCentimeters: measurements[keyPath: kind.keyPath],
-                                    metadata: measurementMetadata[kind.rawValue],
+                                    metadata: measurementMetadata[kind.storageKey],
                                     showsDivider: kind != .calfCircumference
                                 ) {
                                     selectedGuide = kind
@@ -1811,13 +1801,13 @@ private struct RefineTwinView: View {
             GuidedMeasurementSheet(
                 kind: kind,
                 initialValueCentimeters: measurements[keyPath: kind.keyPath],
-                initialMetadata: measurementMetadata[kind.rawValue]
+                initialMetadata: measurementMetadata[kind.storageKey]
             ) { valueCentimeters, metadata in
                 measurements[keyPath: kind.keyPath] = valueCentimeters
                 if let metadata {
-                    measurementMetadata[kind.rawValue] = metadata
+                    measurementMetadata[kind.storageKey] = metadata
                 } else {
-                    measurementMetadata.removeValue(forKey: kind.rawValue)
+                    measurementMetadata.removeValue(forKey: kind.storageKey)
                 }
             }
         }
@@ -1843,14 +1833,20 @@ private struct MeasurementSummaryRow: View {
         guard let valueCentimeters else { return "Add" }
         let unit = metadata?.unit ?? .centimeters
         let value = unit == .centimeters ? valueCentimeters : valueCentimeters / 2.54
-        return value.formatted(.number.precision(.fractionLength(0...1))) + " " + unit.rawValue
+        return value.formatted(.number.precision(.fractionLength(0...1))) + " " + unit.displayName
     }
 
     private var provenance: String {
         guard let metadata else {
             return valueCentimeters == nil ? "Guided protocol available" : "Legacy value · details not recorded"
         }
-        return "\(metadata.side.rawValue) · \(metadata.method.rawValue) · \(metadata.confidence.rawValue) confidence"
+        var details: [String] = []
+        if kind.isBilateral {
+            details.append(metadata.side.displayName)
+        }
+        details.append(metadata.method.displayName)
+        details.append("\(metadata.confidence.displayName) confidence")
+        return details.joined(separator: " · ")
     }
 
     var body: some View {
@@ -1879,6 +1875,7 @@ private struct MeasurementSummaryRow: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("\(kind.title), \(displayValue), \(provenance)")
+            .accessibilityHint("Opens the guided measurement protocol.")
 
             if showsDivider {
                 Rectangle()
@@ -1969,7 +1966,7 @@ private struct GuidedMeasurementSheet: View {
                         VStack(spacing: 14) {
                             Picker("Unit", selection: $unit) {
                                 ForEach(MeasurementUnit.allCases) { unit in
-                                    Text(unit.rawValue).tag(unit)
+                                    Text(unit.displayName).tag(unit)
                                 }
                             }
                             .pickerStyle(.segmented)
@@ -1982,7 +1979,9 @@ private struct GuidedMeasurementSheet: View {
                                 )
                                 .keyboardType(.decimalPad)
                                 .font(.title2.bold().monospacedDigit())
-                                Text(unit.rawValue)
+                                .accessibilityLabel("\(kind.title) value")
+                                .accessibilityHint("Enter the measurement in \(unit.displayName).")
+                                Text(unit.displayName)
                                     .foregroundStyle(EidomeTheme.secondaryText)
                             }
                             .padding(14)
@@ -2016,13 +2015,13 @@ private struct GuidedMeasurementSheet: View {
 
                             Picker("Method", selection: $method) {
                                 ForEach(MeasurementMethod.allCases) { method in
-                                    Text(method.rawValue).tag(method)
+                                    Text(method.displayName).tag(method)
                                 }
                             }
 
                             Picker("Confidence", selection: $confidence) {
                                 ForEach(MeasurementConfidence.allCases) { confidence in
-                                    Text(confidence.rawValue).tag(confidence)
+                                    Text(confidence.displayName).tag(confidence)
                                 }
                             }
                             .pickerStyle(.segmented)
@@ -2122,11 +2121,11 @@ private struct MeasurementLandmarkIllustration: View {
                         )
                 }
 
-                Image(systemName: "arrow.left.and.right")
+                Image(systemName: kind == .inseam ? "arrow.up.and.down" : "arrow.left.and.right")
                     .foregroundStyle(EidomeTheme.cyan)
                     .position(
-                        x: proxy.size.width * 0.78,
-                        y: proxy.size.height * kind.cuePosition
+                        x: proxy.size.width * (kind == .inseam ? 0.60 : 0.78),
+                        y: proxy.size.height * (kind == .inseam ? 0.72 : kind.cuePosition)
                     )
             }
         }

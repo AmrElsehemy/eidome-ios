@@ -260,6 +260,7 @@ struct TwinHomeView: View {
     @State private var sceneResetToken = 0
     @State private var isEditingMobility = false
     @State private var isShowingSettings = false
+    @State private var isShowingExplorerHelp = false
     @State private var selectedStructure: AnatomySelection?
     @State private var focusedStructure: AnatomySelection?
     @State private var hiddenStructureIDs: Set<String> = []
@@ -323,6 +324,11 @@ struct TwinHomeView: View {
                     selectedStructure = selection
                     focusedStructure = selection
                 }
+            }
+        }
+        .sheet(isPresented: $isShowingExplorerHelp) {
+            if let profile = profileStore.selectedProfile {
+                explorerHelpSheet(profile)
             }
         }
     }
@@ -473,8 +479,6 @@ struct TwinHomeView: View {
                 .padding(.vertical, 6)
                 .background(.ultraThinMaterial, in: Capsule())
 
-            whyThisMattersCard(profile)
-
             if selectedMode != .body {
                 anatomyBrowseCard
             }
@@ -536,6 +540,19 @@ struct TwinHomeView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer()
+
+            Button {
+                isShowingExplorerHelp = true
+            } label: {
+                Image(systemName: "questionmark.circle")
+                    .font(.headline)
+                    .foregroundStyle(EidomeTheme.cyan)
+                    .frame(width: 44, height: 44)
+                    .background(EidomeTheme.panel.opacity(0.72), in: Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Why this view matters")
+            .accessibilityHint("Shows how to use this view and its limitations.")
         }
         .padding(.horizontal, 22)
     }
@@ -813,6 +830,33 @@ struct TwinHomeView: View {
                 .stroke(EidomeTheme.cyan.opacity(0.16), lineWidth: 1)
         }
         .padding(.horizontal, 20)
+    }
+
+    private func explorerHelpSheet(_ profile: TwinProfile) -> some View {
+        NavigationStack {
+            ZStack {
+                EidomeTheme.backgroundGradient.ignoresSafeArea()
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 18) {
+                        whyThisMattersCard(profile)
+                    }
+                    .padding(.vertical, 20)
+                }
+            }
+            .foregroundStyle(.white)
+            .navigationTitle(explorerTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        isShowingExplorerHelp = false
+                    }
+                    .foregroundStyle(EidomeTheme.cyan)
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
     }
 
     private func meaningRow(

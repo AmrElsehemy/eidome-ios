@@ -264,6 +264,7 @@ struct TwinHomeView: View {
     @State private var focusedStructure: AnatomySelection?
     @State private var hiddenStructureIDs: Set<String> = []
     @State private var availableStructures: [AnatomySelection] = []
+    @State private var hasPublishedStructureCatalog = false
     @State private var isShowingAnatomyBrowser = false
     @State private var anatomyRegion: AnatomyRegion = .wholeBody
     @State private var anatomyDetailFilter: AnatomyDetailFilter = .all
@@ -424,6 +425,7 @@ struct TwinHomeView: View {
                 cameraResetToken: sceneResetToken,
                 onAnatomyCatalogChanged: { catalog in
                     availableStructures = catalog
+                    hasPublishedStructureCatalog = true
                 },
                 onStructureSelected: { selection in
                     withAnimation(.easeInOut(duration: 0.2)) {
@@ -686,42 +688,63 @@ struct TwinHomeView: View {
         }
     }
 
+    @ViewBuilder
     private var anatomyBrowseCard: some View {
-        Button {
-            isShowingAnatomyBrowser = true
-        } label: {
+        if availableStructures.isEmpty {
             HStack(spacing: 11) {
                 Image(systemName: "list.bullet.rectangle")
                     .font(.headline)
-                    .foregroundStyle(EidomeTheme.cyan)
+                    .foregroundStyle(EidomeTheme.secondaryText)
                     .frame(width: 38, height: 38)
-                    .background(EidomeTheme.cyan.opacity(0.10), in: Circle())
+                    .background(EidomeTheme.secondaryText.opacity(0.10), in: Circle())
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(selectedMode == .body ? "Browse measurements" : "Browse structures")
+                    Text(hasPublishedStructureCatalog ? "Structure list unavailable" : "Preparing structure list")
                         .font(.subheadline.bold())
-                    Text(
-                        availableStructures.isEmpty
-                            ? "Loading this reference layer…"
-                            : "\(filteredAvailableStructures.count) \(selectedMode == .body ? "body inputs" : selectedMode == .joints ? "named joint landmarks" : "visible reference structures")"
-                    )
+                    Text(hasPublishedStructureCatalog
+                         ? "You can still rotate and inspect this reference model."
+                         : "Identifying the named parts in this model…")
                     .font(.caption2)
                     .foregroundStyle(EidomeTheme.secondaryText)
                 }
 
                 Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.caption.bold())
-                    .foregroundStyle(EidomeTheme.secondaryText)
             }
             .padding(12)
             .background(EidomeTheme.panel, in: RoundedRectangle(cornerRadius: 14))
+            .padding(.horizontal, 20)
+        } else {
+            Button {
+                isShowingAnatomyBrowser = true
+            } label: {
+                HStack(spacing: 11) {
+                    Image(systemName: "list.bullet.rectangle")
+                        .font(.headline)
+                        .foregroundStyle(EidomeTheme.cyan)
+                        .frame(width: 38, height: 38)
+                        .background(EidomeTheme.cyan.opacity(0.10), in: Circle())
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(selectedMode == .body ? "Browse measurements" : "Browse structures")
+                            .font(.subheadline.bold())
+                        Text("\(filteredAvailableStructures.count) \(selectedMode == .body ? "body inputs" : selectedMode == .joints ? "named joint landmarks" : "visible reference structures")")
+                            .font(.caption2)
+                            .foregroundStyle(EidomeTheme.secondaryText)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.caption.bold())
+                        .foregroundStyle(EidomeTheme.secondaryText)
+                }
+                .padding(12)
+                .background(EidomeTheme.panel, in: RoundedRectangle(cornerRadius: 14))
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 20)
+            .accessibilityHint("Search and select structures that may be difficult to tap in the 3D model.")
         }
-        .buttonStyle(.plain)
-        .disabled(availableStructures.isEmpty)
-        .padding(.horizontal, 20)
-        .accessibilityHint("Search and select structures that may be difficult to tap in the 3D model.")
     }
 
     private var anatomyEmptyState: some View {
@@ -912,6 +935,7 @@ struct TwinHomeView: View {
         focusedStructure = nil
         hiddenStructureIDs.removeAll()
         availableStructures.removeAll()
+        hasPublishedStructureCatalog = false
         isShowingAnatomyBrowser = false
     }
 

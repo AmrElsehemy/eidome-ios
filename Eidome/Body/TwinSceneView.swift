@@ -462,7 +462,7 @@ struct TwinSceneView: UIViewRepresentable {
 
         var onAnatomyCatalogChanged: (([AnatomySelection]) -> Void)?
         var onStructureSelected: ((AnatomySelection) -> Void)?
-        var lastAnatomyCatalogIDs: [String] = []
+        var lastAnatomyCatalogIDs: [String]?
         var cameraStates: [TwinBodyLayer: TwinCameraState] = [:]
         var cachedAnatomyNodes: [
             String: (node: SCNNode, worldTransform: SCNMatrix4)
@@ -573,7 +573,13 @@ struct TwinSceneView: UIViewRepresentable {
         guard catalogIDs != coordinator.lastAnatomyCatalogIDs else { return }
         coordinator.lastAnatomyCatalogIDs = catalogIDs
 
-        coordinator.onAnatomyCatalogChanged?(catalog)
+        // Publishing synchronously from makeUIView mutates SwiftUI state while
+        // the representable is being created. Defer one run-loop turn so the
+        // first catalog is not dropped as an update-during-render mutation.
+        DispatchQueue.main.async { [weak coordinator] in
+            guard coordinator?.lastAnatomyCatalogIDs == catalogIDs else { return }
+            coordinator?.onAnatomyCatalogChanged?(catalog)
+        }
     }
 
     static func dismantleUIView(
@@ -794,14 +800,17 @@ struct TwinSceneView: UIViewRepresentable {
                 ),
                 let sourceScene = try? SCNScene(url: url, options: [
                     SCNSceneSource.LoadingOption.checkConsistency: true
-                ]),
-                let loaded = sourceScene.rootNode.childNode(
-                    withName: rootName,
-                    recursively: true
-                )
+                ])
             else {
                 return nil
             }
+            let importedRootNames = [
+                rootName,
+                rootName.replacingOccurrences(of: "Eidome", with: "")
+            ]
+            guard let loaded = importedRootNames.lazy.compactMap({ candidate in
+                sourceScene.rootNode.childNode(withName: candidate, recursively: true)
+            }).first else { return nil }
             sourceRoot = loaded
             sourceWorldTransform = loaded.worldTransform
             coordinator.cachedAnatomyNodes[rootName] = (
@@ -812,6 +821,7 @@ struct TwinSceneView: UIViewRepresentable {
 
         let content = sourceRoot.clone()
         guard content.geometry != nil || !content.childNodes.isEmpty else { return nil }
+        normalizeSelectableNodeNames(in: content, layerRootName: rootName)
 
         // The named layer is nested below the USDZ scene root. Preserve the
         // ancestor normalization transform before detaching the cloned layer.
@@ -838,6 +848,41 @@ struct TwinSceneView: UIViewRepresentable {
         model.eulerAngles.y = -.pi / 12
         model.name = rootName
         return model
+    }
+
+    /// SceneKit does not preserve Blender's object hierarchy consistently for
+    /// every USDZ importer version. Ensure each imported geometry can still be
+    /// identified even when its `Eidome…` parent prefix was flattened away.
+    private func normalizeSelectableNodeNames(
+        in root: SCNNode,
+        layerRootName: String
+    ) {
+        let expectedPrefix = "\(layerRootName)_"
+        let importedRootName = layerRootName.replacingOccurrences(of: "Eidome", with: "")
+
+        root.enumerateChildNodes { node, _ in
+            guard node.geometry != nil, AnatomySelection(node: node) == nil else { return }
+
+            var candidate: SCNNode? = node
+            var sourceName: String?
+            while let current = candidate, current !== root {
+                if let name = current.name?.trimmingCharacters(in: .whitespacesAndNewlines),
+                   !name.isEmpty,
+                   name.caseInsensitiveCompare("Mesh") != .orderedSame,
+                   name.caseInsensitiveCompare(layerRootName) != .orderedSame,
+                   name.caseInsensitiveCompare(importedRootName) != .orderedSame {
+                    sourceName = name
+                    break
+                }
+                candidate = current.parent
+            }
+
+            guard var sourceName else { return }
+            if sourceName.hasPrefix("\(importedRootName)_") {
+                sourceName.removeFirst(importedRootName.count + 1)
+            }
+            node.name = expectedPrefix + sourceName
+        }
     }
 
     private func aggregateBoundingBox(

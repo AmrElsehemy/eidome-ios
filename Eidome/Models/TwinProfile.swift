@@ -24,11 +24,31 @@ struct BodyMeasurements: Codable, Hashable {
     var isEmpty: Bool { completedCount == 0 }
 }
 
+enum BodyMeasurementKind: String, Codable, CaseIterable, Identifiable {
+    case shoulderWidth = "shoulderWidth"
+    case chestCircumference = "chestCircumference"
+    case waistCircumference = "waistCircumference"
+    case hipCircumference = "hipCircumference"
+    case inseam = "inseam"
+    case thighCircumference = "thighCircumference"
+    case calfCircumference = "calfCircumference"
+
+    var id: String { rawValue }
+    var storageKey: String { rawValue }
+}
+
 enum MeasurementUnit: String, Codable, CaseIterable, Identifiable {
     case centimeters = "cm"
     case inches = "in"
 
     var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .centimeters: "cm"
+        case .inches: "in"
+        }
+    }
 }
 
 enum MeasurementSide: String, Codable, CaseIterable, Identifiable {
@@ -37,6 +57,14 @@ enum MeasurementSide: String, Codable, CaseIterable, Identifiable {
     case right = "Right"
 
     var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .center: "Centre"
+        case .left: "Left"
+        case .right: "Right"
+        }
+    }
 }
 
 enum MeasurementMethod: String, Codable, CaseIterable, Identifiable {
@@ -45,6 +73,14 @@ enum MeasurementMethod: String, Codable, CaseIterable, Identifiable {
     case other = "Other method"
 
     var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .selfTape: "Self-measured tape"
+        case .assistedTape: "Assisted tape"
+        case .other: "Other method"
+        }
+    }
 }
 
 enum MeasurementConfidence: String, Codable, CaseIterable, Identifiable {
@@ -53,6 +89,14 @@ enum MeasurementConfidence: String, Codable, CaseIterable, Identifiable {
     case high = "High"
 
     var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .low: "Low"
+        case .medium: "Medium"
+        case .high: "High"
+        }
+    }
 }
 
 struct BodyMeasurementMetadata: Codable, Hashable {

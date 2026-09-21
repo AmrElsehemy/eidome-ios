@@ -320,6 +320,7 @@ struct TwinSceneView: UIViewRepresentable {
     var cameraStateScope: TwinCameraStateScope = .explorer
     var focusedStructure: AnatomySelection? = nil
     var hiddenStructureIDs: Set<String> = []
+    var hidesSelectableStructures = false
     var cameraResetToken: Int = 0
     var onAnatomyCatalogChanged: (([AnatomySelection]) -> Void)? = nil
     var onStructureSelected: ((AnatomySelection) -> Void)? = nil
@@ -365,12 +366,14 @@ struct TwinSceneView: UIViewRepresentable {
         applyAnatomyDisplay(
             in: view,
             selection: focusedStructure,
-            hiddenStructureIDs: hiddenStructureIDs
+            hiddenStructureIDs: hiddenStructureIDs,
+            hidesSelectableStructures: hidesSelectableStructures
         )
         context.coordinator.lastProfile = profile
         context.coordinator.lastLayer = layer
         context.coordinator.lastFocusedStructure = focusedStructure
         context.coordinator.lastHiddenStructureIDs = hiddenStructureIDs
+        context.coordinator.lastHidesSelectableStructures = hidesSelectableStructures
         context.coordinator.lastCameraResetToken = cameraResetToken
         return view
     }
@@ -431,14 +434,17 @@ struct TwinSceneView: UIViewRepresentable {
 
         if rebuildsScene || resetsCamera ||
             context.coordinator.lastFocusedStructure != focusedStructure ||
-            context.coordinator.lastHiddenStructureIDs != hiddenStructureIDs {
+            context.coordinator.lastHiddenStructureIDs != hiddenStructureIDs ||
+            context.coordinator.lastHidesSelectableStructures != hidesSelectableStructures {
             applyAnatomyDisplay(
                 in: view,
                 selection: focusedStructure,
-                hiddenStructureIDs: hiddenStructureIDs
+                hiddenStructureIDs: hiddenStructureIDs,
+                hidesSelectableStructures: hidesSelectableStructures
             )
             context.coordinator.lastFocusedStructure = focusedStructure
             context.coordinator.lastHiddenStructureIDs = hiddenStructureIDs
+            context.coordinator.lastHidesSelectableStructures = hidesSelectableStructures
         }
     }
 
@@ -451,6 +457,7 @@ struct TwinSceneView: UIViewRepresentable {
         var lastLayer: TwinBodyLayer?
         var lastFocusedStructure: AnatomySelection?
         var lastHiddenStructureIDs: Set<String> = []
+        var lastHidesSelectableStructures = false
         var lastCameraResetToken = 0
 
         var onAnatomyCatalogChanged: (([AnatomySelection]) -> Void)?
@@ -579,7 +586,8 @@ struct TwinSceneView: UIViewRepresentable {
     private func applyAnatomyDisplay(
         in view: SCNView,
         selection: AnatomySelection?,
-        hiddenStructureIDs: Set<String>
+        hiddenStructureIDs: Set<String>,
+        hidesSelectableStructures: Bool
     ) {
         view.scene?.rootNode.enumerateChildNodes { node, _ in
             guard
@@ -592,7 +600,7 @@ struct TwinSceneView: UIViewRepresentable {
                 return
             }
 
-            node.isHidden = hiddenStructureIDs.contains(structure.id)
+            node.isHidden = hidesSelectableStructures || hiddenStructureIDs.contains(structure.id)
             node.opacity = selection == nil || structure == selection ? 1.0 : 0.08
         }
     }

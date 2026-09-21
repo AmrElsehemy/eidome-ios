@@ -62,6 +62,10 @@ grep -q 'cameraStateScope: .explorer' Eidome/Views/TwinHomeView.swift
 grep -q 'cameraStateScope: .refinePreview' Eidome/Views/TwinHomeView.swift
 grep -q 'cameraStateScope: .mobilityEditor' Eidome/Views/MobilityEditorView.swift
 grep -q 'guard selectedMode == .anatomy else { return availableStructures }' Eidome/Views/TwinHomeView.swift
+grep -q 'hidesSelectableStructures: selectedMode == .body' Eidome/Views/TwinHomeView.swift
+grep -q 'node.isHidden = hidesSelectableStructures' Eidome/Body/TwinSceneView.swift
+grep -q 'Measurements shaping this estimate' Eidome/Views/TwinHomeView.swift
+grep -q 'initialGuide: requestedMeasurementGuide' Eidome/Views/TwinHomeView.swift
 grep -q 'BodyMeasurementKind.allCases.filter' Eidome/Views/TwinHomeView.swift
 grep -q 'didEnterBackgroundNotification' Eidome/Body/TwinSceneView.swift
 grep -q 'BodyMeasurementMetadata' Eidome/Models/TwinProfile.swift

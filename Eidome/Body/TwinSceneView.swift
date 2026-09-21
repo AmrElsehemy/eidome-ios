@@ -321,6 +321,7 @@ struct TwinSceneView: UIViewRepresentable {
     var focusedStructure: AnatomySelection? = nil
     var hiddenStructureIDs: Set<String> = []
     var hidesSelectableStructures = false
+    var allowsCameraControl = true
     var cameraResetToken: Int = 0
     var onAnatomyCatalogChanged: (([AnatomySelection]) -> Void)? = nil
     var onStructureSelected: ((AnatomySelection) -> Void)? = nil
@@ -339,7 +340,7 @@ struct TwinSceneView: UIViewRepresentable {
         context.coordinator.attach(to: view)
         view.backgroundColor = .clear
         view.antialiasingMode = .multisampling4X
-        view.allowsCameraControl = true
+        view.allowsCameraControl = allowsCameraControl
         view.defaultCameraController.interactionMode = .orbitTurntable
         view.defaultCameraController.inertiaEnabled = true
         view.autoenablesDefaultLighting = false
@@ -379,6 +380,9 @@ struct TwinSceneView: UIViewRepresentable {
     }
 
     func updateUIView(_ view: SCNView, context: Context) {
+        if view.allowsCameraControl != allowsCameraControl {
+            view.allowsCameraControl = allowsCameraControl
+        }
         context.coordinator.onAnatomyCatalogChanged = onAnatomyCatalogChanged
         context.coordinator.onStructureSelected = onStructureSelected
         let rebuildsScene =

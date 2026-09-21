@@ -258,8 +258,10 @@ struct TwinHomeView: View {
     @State private var selectedLayer: TwinBodyLayer = .body
     @State private var lastAnatomyLayer: TwinBodyLayer = .muscles
     @State private var sceneResetToken = 0
+    @State private var isSceneCameraControlEnabled = false
     @State private var isEditingMobility = false
     @State private var isShowingSettings = false
+    @State private var explorerHelpProfile: TwinProfile?
     @State private var selectedStructure: AnatomySelection?
     @State private var focusedStructure: AnatomySelection?
     @State private var hiddenStructureIDs: Set<String> = []
@@ -324,6 +326,9 @@ struct TwinHomeView: View {
                     focusedStructure = selection
                 }
             }
+        }
+        .sheet(item: $explorerHelpProfile) { profile in
+            explorerHelpSheet(profile)
         }
     }
 
@@ -422,6 +427,7 @@ struct TwinHomeView: View {
                 focusedStructure: focusedStructure,
                 hiddenStructureIDs: sceneHiddenStructureIDs,
                 hidesSelectableStructures: selectedMode == .body,
+                allowsCameraControl: isSceneCameraControlEnabled,
                 cameraResetToken: sceneResetToken,
                 onAnatomyCatalogChanged: { catalog in
                     availableStructures = catalog
@@ -439,10 +445,12 @@ struct TwinHomeView: View {
             .frame(height: selectedMode == .body ? 380 : 420)
             .id(profile.id)
 
-            HStack(spacing: 10) {
-                Text(selectedMode == .anatomy || selectedMode == .joints
-                     ? "Tap a structure · Drag to rotate · Pinch to zoom"
-                     : "Drag to rotate · Pinch to zoom")
+            HStack(spacing: 8) {
+                Text(isSceneCameraControlEnabled
+                     ? "Drag to rotate · Pinch to zoom"
+                     : selectedMode == .anatomy || selectedMode == .joints
+                        ? "Tap a structure · Scroll normally"
+                        : "Scroll normally · Enable 3D controls to rotate")
                     .font(.caption)
                     .foregroundStyle(EidomeTheme.secondaryText)
                     .lineLimit(1)
@@ -450,16 +458,38 @@ struct TwinHomeView: View {
 
                 Spacer(minLength: 4)
 
-                Button {
-                    sceneResetToken += 1
-                } label: {
-                    Label("Reset", systemImage: "arrow.counterclockwise")
-                        .font(.caption.bold())
-                        .foregroundStyle(EidomeTheme.cyan)
-                        .frame(minWidth: 44, minHeight: 44)
+                if isSceneCameraControlEnabled {
+                    Button {
+                        sceneResetToken += 1
+                    } label: {
+                        Image(systemName: "arrow.counterclockwise")
+                            .font(.caption.bold())
+                            .foregroundStyle(EidomeTheme.cyan)
+                            .frame(width: 38, height: 44)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Reset 3D view")
+
+                    Button("Done") {
+                        isSceneCameraControlEnabled = false
+                    }
+                    .font(.caption.bold())
+                    .foregroundStyle(EidomeTheme.cyan)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Returns vertical swipes to page scrolling.")
+                } else {
+                    Button {
+                        isSceneCameraControlEnabled = true
+                    } label: {
+                        Label("Rotate 3D", systemImage: "view.3d")
+                            .font(.caption.bold())
+                            .foregroundStyle(EidomeTheme.cyan)
+                            .frame(minHeight: 44)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Enables drag and pinch gestures on the model.")
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Reset 3D view")
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
@@ -472,8 +502,6 @@ struct TwinHomeView: View {
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
                 .background(.ultraThinMaterial, in: Capsule())
-
-            whyThisMattersCard(profile)
 
             if selectedMode != .body {
                 anatomyBrowseCard
@@ -536,6 +564,19 @@ struct TwinHomeView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer()
+
+            Button {
+                explorerHelpProfile = profileStore.selectedProfile
+            } label: {
+                Image(systemName: "questionmark.circle")
+                    .font(.headline)
+                    .foregroundStyle(EidomeTheme.cyan)
+                    .frame(width: 44, height: 44)
+                    .background(EidomeTheme.panel.opacity(0.72), in: Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Why this view matters")
+            .accessibilityHint("Shows how to use this view and its limitations.")
         }
         .padding(.horizontal, 22)
     }
@@ -815,6 +856,33 @@ struct TwinHomeView: View {
         .padding(.horizontal, 20)
     }
 
+    private func explorerHelpSheet(_ profile: TwinProfile) -> some View {
+        NavigationStack {
+            ZStack {
+                EidomeTheme.backgroundGradient.ignoresSafeArea()
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 18) {
+                        whyThisMattersCard(profile)
+                    }
+                    .padding(.vertical, 20)
+                }
+            }
+            .foregroundStyle(.white)
+            .navigationTitle(explorerTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        explorerHelpProfile = nil
+                    }
+                    .foregroundStyle(EidomeTheme.cyan)
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+    }
+
     private func meaningRow(
         symbol: String,
         title: String,
@@ -937,6 +1005,7 @@ struct TwinHomeView: View {
         availableStructures.removeAll()
         hasPublishedStructureCatalog = false
         isShowingAnatomyBrowser = false
+        isSceneCameraControlEnabled = false
     }
 
     @ViewBuilder

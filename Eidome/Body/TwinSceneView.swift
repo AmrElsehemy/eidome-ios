@@ -1376,7 +1376,7 @@ struct TwinSceneControlBar: View {
                     Image(systemName: "arrow.counterclockwise")
                         .font(.caption.bold())
                         .foregroundStyle(EidomeTheme.cyan)
-                        .frame(width: 38, height: 44)
+                        .frame(width: 44, height: 44)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Reset 3D view")

@@ -1384,7 +1384,9 @@ struct TwinHomeView: View {
             ForEach(BodyMeasurementKind.allCases) { kind in
                 bodyMeasurementStatusRow(
                     kind,
-                    valueCentimeters: measurements?[keyPath: kind.keyPath]
+                    valueCentimeters: measurements.flatMap { values in
+                        values[keyPath: kind.keyPath]
+                    }
                 )
 
                 if kind != .calfCircumference {

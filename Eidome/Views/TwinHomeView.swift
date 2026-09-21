@@ -254,6 +254,7 @@ struct TwinHomeView: View {
     @State private var isShowingProfiles = false
     @State private var isShowingDetails = false
     @State private var isRefiningTwin = false
+    @State private var requestedMeasurementGuide: BodyMeasurementKind?
     @State private var selectedLayer: TwinBodyLayer = .body
     @State private var lastAnatomyLayer: TwinBodyLayer = .muscles
     @State private var sceneResetToken = 0
@@ -292,9 +293,15 @@ struct TwinHomeView: View {
                 TwinDetailsView(profile: profile)
             }
         }
-        .sheet(isPresented: $isRefiningTwin) {
+        .sheet(
+            isPresented: $isRefiningTwin,
+            onDismiss: { requestedMeasurementGuide = nil }
+        ) {
             if let profile = profileStore.selectedProfile {
-                RefineTwinView(profile: profile)
+                RefineTwinView(
+                    profile: profile,
+                    initialGuide: requestedMeasurementGuide
+                )
             }
         }
         .sheet(isPresented: $isEditingMobility) {
@@ -413,6 +420,7 @@ struct TwinHomeView: View {
                 cameraStateScope: .explorer,
                 focusedStructure: focusedStructure,
                 hiddenStructureIDs: sceneHiddenStructureIDs,
+                hidesSelectableStructures: selectedMode == .body,
                 cameraResetToken: sceneResetToken,
                 onAnatomyCatalogChanged: { catalog in
                     availableStructures = catalog
@@ -426,7 +434,7 @@ struct TwinHomeView: View {
                     }
                 }
             )
-            .frame(height: 420)
+            .frame(height: selectedMode == .body ? 380 : 420)
             .id(profile.id)
 
             HStack(spacing: 10) {
@@ -465,7 +473,7 @@ struct TwinHomeView: View {
 
             whyThisMattersCard(profile)
 
-            if selectedMode == .body || selectedMode == .anatomy || selectedMode == .joints {
+            if selectedMode != .body {
                 anatomyBrowseCard
             }
 
@@ -492,14 +500,18 @@ struct TwinHomeView: View {
                 .padding(.horizontal, 20)
             }
 
-            if let selectedStructure {
-                selectionCard(selectedStructure, profile: profile)
-                    .transition(.move(edge: .top).combined(with: .opacity))
+            if selectedMode == .body {
+                bodyMeasurementStatusCard(profile)
             } else {
-                anatomyEmptyState
-            }
+                if let selectedStructure {
+                    selectionCard(selectedStructure, profile: profile)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                } else {
+                    anatomyEmptyState
+                }
 
-            contextualAction(profile)
+                contextualAction(profile)
+            }
         }
         .padding(.top, 12)
     }
@@ -864,7 +876,7 @@ struct TwinHomeView: View {
     private func contextualAction(_ profile: TwinProfile) -> some View {
         switch selectedMode {
         case .body:
-            improveCard(profile)
+            EmptyView()
         case .anatomy:
             EmptyView()
         case .joints:
@@ -1343,36 +1355,123 @@ struct TwinHomeView: View {
         .padding(.top, 18)
     }
 
-    private func improveCard(_ profile: TwinProfile) -> some View {
-        Button {
-            isRefiningTwin = true
-        } label: {
-            HStack(spacing: 14) {
+    private func bodyMeasurementStatusCard(_ profile: TwinProfile) -> some View {
+        let measurements = profile.bodyMeasurements
+        let completedCount = measurements?.completedCount ?? 0
+
+        return VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 12) {
                 Image(systemName: "ruler")
-                    .font(.title2)
-                    .foregroundStyle(EidomeTheme.violet)
-                    .frame(width: 44, height: 44)
-                    .background(EidomeTheme.violet.opacity(0.14), in: Circle())
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(profile.bodyMeasurements?.isEmpty == false ? "Refine body shape" : "Shape this twin")
+                    .font(.headline)
+                    .foregroundStyle(EidomeTheme.cyan)
+                    .frame(width: 40, height: 40)
+                    .background(EidomeTheme.cyan.opacity(0.11), in: Circle())
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Measurements shaping this estimate")
                         .font(.headline)
-                    Text("\(profile.bodyMeasurements?.completedCount ?? 0) of 7 body measurements added")
+                    Text("\(completedCount) of 7 entered · Named inputs, not scan points")
                         .font(.caption)
                         .foregroundStyle(EidomeTheme.secondaryText)
-                        .multilineTextAlignment(.leading)
                 }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .foregroundStyle(EidomeTheme.secondaryText)
             }
-            .padding(18)
-            .glassCard()
+            .padding(16)
+
+            Rectangle()
+                .fill(EidomeTheme.line)
+                .frame(height: 1)
+
+            ForEach(BodyMeasurementKind.allCases) { kind in
+                bodyMeasurementStatusRow(
+                    kind,
+                    valueCentimeters: measurements?[keyPath: kind.keyPath]
+                )
+
+                if kind != .calfCircumference {
+                    Rectangle()
+                        .fill(EidomeTheme.line)
+                        .frame(height: 1)
+                        .padding(.leading, 52)
+                }
+            }
+
+            Button {
+                requestedMeasurementGuide = nil
+                isRefiningTwin = true
+            } label: {
+                Label(
+                    completedCount == 0 ? "Add body measurements" : "Review all measurements",
+                    systemImage: "slider.horizontal.3"
+                )
+                .font(.subheadline.bold())
+                .foregroundStyle(.black)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(EidomeTheme.cyan, in: RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
+            .padding(14)
+
+            Text("Measurements refine proportions only. Eidome is not scanning or measuring your body.")
+                .font(.caption2)
+                .foregroundStyle(EidomeTheme.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 16)
+        }
+        .background(EidomeTheme.panel.opacity(0.86), in: RoundedRectangle(cornerRadius: 18))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(EidomeTheme.cyan.opacity(0.18), lineWidth: 1)
+        }
+        .padding(.horizontal, 20)
+    }
+
+    private func bodyMeasurementStatusRow(
+        _ kind: BodyMeasurementKind,
+        valueCentimeters: Double?
+    ) -> some View {
+        Button {
+            requestedMeasurementGuide = kind
+            isRefiningTwin = true
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: valueCentimeters == nil ? "plus.circle" : "checkmark.circle.fill")
+                    .font(.body)
+                    .foregroundStyle(valueCentimeters == nil ? EidomeTheme.secondaryText : EidomeTheme.cyan)
+                    .frame(width: 24)
+                    .accessibilityHidden(true)
+
+                Text(kind.title)
+                    .font(.subheadline)
+                    .foregroundStyle(.white)
+
+                Spacer()
+
+                Text(
+                    valueCentimeters.map {
+                        $0.formatted(.number.precision(.fractionLength(0...1))) + " cm"
+                    } ?? "Add"
+                )
+                .font(.subheadline.bold().monospacedDigit())
+                .foregroundStyle(valueCentimeters == nil ? EidomeTheme.cyan : .white)
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.bold())
+                    .foregroundStyle(EidomeTheme.secondaryText)
+                    .accessibilityHidden(true)
+            }
+            .padding(.horizontal, 16)
+            .frame(minHeight: 48)
         }
         .buttonStyle(.plain)
-        .padding(.horizontal, 20)
-        .padding(.top, 14)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Shape this twin with body measurements.")
+        .accessibilityLabel(
+            "\(kind.title), " +
+            (valueCentimeters.map {
+                $0.formatted(.number.precision(.fractionLength(0...1))) + " centimetres"
+            } ?? "not entered")
+        )
+        .accessibilityHint("Opens the guided measurement workflow.")
     }
 
     private func mobilityCard(_ profile: TwinProfile) -> some View {
@@ -1661,12 +1760,16 @@ private struct RefineTwinView: View {
     @State private var weightKilograms: Double
     @State private var selectedGuide: BodyMeasurementKind?
 
-    init(profile: TwinProfile) {
+    init(
+        profile: TwinProfile,
+        initialGuide: BodyMeasurementKind? = nil
+    ) {
         self.profile = profile
         _measurements = State(initialValue: profile.bodyMeasurements ?? BodyMeasurements())
         _measurementMetadata = State(initialValue: profile.measurementMetadata ?? [:])
         _heightCentimeters = State(initialValue: profile.heightCentimeters)
         _weightKilograms = State(initialValue: profile.weightKilograms)
+        _selectedGuide = State(initialValue: initialGuide)
     }
 
     private var previewProfile: TwinProfile {

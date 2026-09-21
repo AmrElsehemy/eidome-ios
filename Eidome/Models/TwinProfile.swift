@@ -24,6 +24,89 @@ struct BodyMeasurements: Codable, Hashable {
     var isEmpty: Bool { completedCount == 0 }
 }
 
+enum BodyMeasurementKind: String, Codable, CaseIterable, Identifiable {
+    case shoulderWidth = "shoulderWidth"
+    case chestCircumference = "chestCircumference"
+    case waistCircumference = "waistCircumference"
+    case hipCircumference = "hipCircumference"
+    case inseam = "inseam"
+    case thighCircumference = "thighCircumference"
+    case calfCircumference = "calfCircumference"
+
+    var id: String { rawValue }
+    var storageKey: String { rawValue }
+}
+
+enum MeasurementUnit: String, Codable, CaseIterable, Identifiable {
+    case centimeters = "cm"
+    case inches = "in"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .centimeters: "cm"
+        case .inches: "in"
+        }
+    }
+}
+
+enum MeasurementSide: String, Codable, CaseIterable, Identifiable {
+    case center = "Centre"
+    case left = "Left"
+    case right = "Right"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .center: "Centre"
+        case .left: "Left"
+        case .right: "Right"
+        }
+    }
+}
+
+enum MeasurementMethod: String, Codable, CaseIterable, Identifiable {
+    case selfTape = "Self-measured tape"
+    case assistedTape = "Assisted tape"
+    case other = "Other method"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .selfTape: "Self-measured tape"
+        case .assistedTape: "Assisted tape"
+        case .other: "Other method"
+        }
+    }
+}
+
+enum MeasurementConfidence: String, Codable, CaseIterable, Identifiable {
+    case low = "Low"
+    case medium = "Medium"
+    case high = "High"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .low: "Low"
+        case .medium: "Medium"
+        case .high: "High"
+        }
+    }
+}
+
+struct BodyMeasurementMetadata: Codable, Hashable {
+    var recordedAt: Date
+    var unit: MeasurementUnit
+    var side: MeasurementSide
+    var method: MeasurementMethod
+    var confidence: MeasurementConfidence
+}
+
 struct MobilityProfile: Codable, Hashable {
     var leftAnkleDorsiflexion: Double? = nil
     var rightAnkleDorsiflexion: Double? = nil
@@ -88,6 +171,7 @@ struct TwinProfile: Identifiable, Codable, Hashable {
     var createdAt: Date
     var bodyMeasurements: BodyMeasurements?
     var measurementsUpdatedAt: Date?
+    var measurementMetadata: [String: BodyMeasurementMetadata]?
     var mobilityProfile: MobilityProfile?
 
     init(
@@ -101,6 +185,7 @@ struct TwinProfile: Identifiable, Codable, Hashable {
         createdAt: Date = .now,
         bodyMeasurements: BodyMeasurements? = nil,
         measurementsUpdatedAt: Date? = nil,
+        measurementMetadata: [String: BodyMeasurementMetadata]? = nil,
         mobilityProfile: MobilityProfile? = nil
     ) {
         self.id = id
@@ -113,6 +198,7 @@ struct TwinProfile: Identifiable, Codable, Hashable {
         self.createdAt = createdAt
         self.bodyMeasurements = bodyMeasurements
         self.measurementsUpdatedAt = measurementsUpdatedAt
+        self.measurementMetadata = measurementMetadata
         self.mobilityProfile = mobilityProfile
     }
 

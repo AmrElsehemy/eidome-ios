@@ -1,4 +1,4 @@
-# Eidome v0.19
+# Eidome v0.20
 
 Eidome is a body-centric digital twin prototype for iPhone and iPad.
 
@@ -13,19 +13,20 @@ Official domain: [eidome.com](https://eidome.com)
 
 Bundle identifier: `ai.knowlly.eidome`
 
-App Store version: `1.0` · Build: `19` · Internal milestone: `v0.19`
+App Store version: `1.0` · Build: `20` · Internal milestone: `v0.20`
 
-## v0.19 scope
+## v0.20 scope
 
-v0.19 makes the licensed anatomy asset easier to explore by region and tissue type while strengthening asset integrity and provenance.
+v0.20 turns regional body inputs into guided, repeatable measurement records.
 
-- Filter reference anatomy into head/neck, shoulder/chest, arm/forearm, trunk, hip/thigh and lower-leg/foot regions
-- Separate muscle surfaces from fascia, tendons and other connective structures
-- Expose independent calf, thigh, shoulder and forearm structures already present in the pinned source export
-- Attach source and CC BY-SA 4.0 provenance to every anatomy and joint selection card
-- Pin and validate the exact bundled USDZ SHA-256 checksum
-- Validate representative named structures in every high-value limb region
-- State honestly that the current export is superficial and does not contain every deep structure
+- Guide shoulder, chest, waist, hip, inseam, thigh and calf capture with landmark instructions and visual cues
+- Accept centimetres or inches while storing canonical centimetres for model compatibility
+- Record bilateral side where relevant
+- Record date, method and user confidence with each measurement
+- Validate plausible ranges before saving
+- Support retaking or clearing an existing measurement
+- Show method, confidence and per-measurement date back in Body mode
+- Preserve older saved measurements that do not contain protocol metadata
 
 ### Foundation retained from v0.10
 

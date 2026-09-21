@@ -180,6 +180,75 @@ private enum AnatomyDetailFilter: String, CaseIterable, Identifiable {
     }
 }
 
+private extension BodyMeasurementKind {
+    var title: String {
+        switch self {
+        case .shoulderWidth: "Shoulder width"
+        case .chestCircumference: "Chest circumference"
+        case .waistCircumference: "Waist circumference"
+        case .hipCircumference: "Hip circumference"
+        case .inseam: "Inseam"
+        case .thighCircumference: "Thigh circumference"
+        case .calfCircumference: "Calf circumference"
+        }
+    }
+
+    var keyPath: WritableKeyPath<BodyMeasurements, Double?> {
+        switch self {
+        case .shoulderWidth: \BodyMeasurements.shoulderWidthCentimeters
+        case .chestCircumference: \BodyMeasurements.chestCircumferenceCentimeters
+        case .waistCircumference: \BodyMeasurements.waistCircumferenceCentimeters
+        case .hipCircumference: \BodyMeasurements.hipCircumferenceCentimeters
+        case .inseam: \BodyMeasurements.inseamCentimeters
+        case .thighCircumference: \BodyMeasurements.thighCircumferenceCentimeters
+        case .calfCircumference: \BodyMeasurements.calfCircumferenceCentimeters
+        }
+    }
+
+    var validCentimeterRange: ClosedRange<Double> {
+        switch self {
+        case .shoulderWidth: 20...70
+        case .chestCircumference: 40...180
+        case .waistCircumference: 35...180
+        case .hipCircumference: 40...180
+        case .inseam: 35...130
+        case .thighCircumference: 20...100
+        case .calfCircumference: 15...70
+        }
+    }
+
+    var isBilateral: Bool {
+        switch self {
+        case .inseam, .thighCircumference, .calfCircumference: true
+        default: false
+        }
+    }
+
+    var landmark: String {
+        switch self {
+        case .shoulderWidth: "Measure straight across the back between the outer shoulder landmarks. This is a width, not a circumference."
+        case .chestCircumference: "Keep the tape level around the fullest chest while standing naturally."
+        case .waistCircumference: "Wrap the tape level around the natural waist after a normal, relaxed exhale."
+        case .hipCircumference: "Wrap the tape level around the fullest part of the hips and seat."
+        case .inseam: "Measure from the crotch landmark straight down the inner leg to the floor."
+        case .thighCircumference: "Wrap the tape level around the selected thigh at a repeatable point below the hip crease."
+        case .calfCircumference: "Wrap the tape level around the widest point of the selected calf."
+        }
+    }
+
+    var cuePosition: CGFloat {
+        switch self {
+        case .shoulderWidth: 0.22
+        case .chestCircumference: 0.31
+        case .waistCircumference: 0.44
+        case .hipCircumference: 0.53
+        case .inseam: 0.61
+        case .thighCircumference: 0.67
+        case .calfCircumference: 0.82
+        }
+    }
+}
+
 struct TwinHomeView: View {
     @EnvironmentObject private var profileStore: ProfileStore
     @State private var isShowingProfiles = false
@@ -927,37 +996,50 @@ struct TwinHomeView: View {
         let name = selection.name.lowercased()
         let value: Double?
         let effect: String
+        let metadataKey: String
 
         if name.contains("shoulder") {
             value = measurements?.shoulderWidthCentimeters
             effect = "Adjusts shoulder breadth relative to the torso."
+            metadataKey = BodyMeasurementKind.shoulderWidth.storageKey
         } else if name.contains("chest") {
             value = measurements?.chestCircumferenceCentimeters
             effect = "Refines chest width and depth instead of relying only on height and weight."
+            metadataKey = BodyMeasurementKind.chestCircumference.storageKey
         } else if name.contains("waist") {
             value = measurements?.waistCircumferenceCentimeters
             effect = "Refines the waist region of the exterior body estimate."
+            metadataKey = BodyMeasurementKind.waistCircumference.storageKey
         } else if name.contains("hip") {
             value = measurements?.hipCircumferenceCentimeters
             effect = "Refines hip width and depth in the exterior estimate."
+            metadataKey = BodyMeasurementKind.hipCircumference.storageKey
         } else if name.contains("inseam") {
             value = measurements?.inseamCentimeters
             effect = "Adjusts the model's leg-to-torso proportion."
+            metadataKey = BodyMeasurementKind.inseam.storageKey
         } else if name.contains("thigh") {
             value = measurements?.thighCircumferenceCentimeters
             effect = "Refines upper-leg volume while preserving overall height."
+            metadataKey = BodyMeasurementKind.thighCircumference.storageKey
         } else {
             value = measurements?.calfCircumferenceCentimeters
             effect = "Refines lower-leg volume while preserving overall height."
+            metadataKey = BodyMeasurementKind.calfCircumference.storageKey
         }
 
         let isEntered = value != nil
+        let metadata = profile.measurementMetadata?[metadataKey]
         return (
             value.map { $0.formatted(.number.precision(.fractionLength(0...1))) + " cm" }
                 ?? "Not entered",
-            isEntered ? "Entered measurement" : "Estimated from profile inputs",
             isEntered
-                ? (profile.measurementsUpdatedAt?.formatted(date: .abbreviated, time: .omitted)
+                ? metadata.map { "Entered · \($0.method.displayName) · \($0.confidence.displayName) confidence" }
+                    ?? "Entered measurement"
+                : "Estimated from profile inputs",
+            isEntered
+                ? (metadata?.recordedAt.formatted(date: .abbreviated, time: .omitted)
+                    ?? profile.measurementsUpdatedAt?.formatted(date: .abbreviated, time: .omitted)
                     ?? "Date not recorded")
                 : "Not measured",
             effect,
@@ -1571,12 +1653,15 @@ private struct RefineTwinView: View {
     @EnvironmentObject private var profileStore: ProfileStore
     let profile: TwinProfile
     @State private var measurements: BodyMeasurements
+    @State private var measurementMetadata: [String: BodyMeasurementMetadata]
     @State private var heightCentimeters: Double
     @State private var weightKilograms: Double
+    @State private var selectedGuide: BodyMeasurementKind?
 
     init(profile: TwinProfile) {
         self.profile = profile
         _measurements = State(initialValue: profile.bodyMeasurements ?? BodyMeasurements())
+        _measurementMetadata = State(initialValue: profile.measurementMetadata ?? [:])
         _heightCentimeters = State(initialValue: profile.heightCentimeters)
         _weightKilograms = State(initialValue: profile.weightKilograms)
     }
@@ -1654,13 +1739,16 @@ private struct RefineTwinView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
 
                         VStack(spacing: 0) {
-                            MeasurementInputRow(title: "Shoulder width", value: $measurements.shoulderWidthCentimeters)
-                            MeasurementInputRow(title: "Chest circumference", value: $measurements.chestCircumferenceCentimeters)
-                            MeasurementInputRow(title: "Waist circumference", value: $measurements.waistCircumferenceCentimeters)
-                            MeasurementInputRow(title: "Hip circumference", value: $measurements.hipCircumferenceCentimeters)
-                            MeasurementInputRow(title: "Inseam", value: $measurements.inseamCentimeters)
-                            MeasurementInputRow(title: "Thigh circumference", value: $measurements.thighCircumferenceCentimeters)
-                            MeasurementInputRow(title: "Calf circumference", value: $measurements.calfCircumferenceCentimeters, showsDivider: false)
+                            ForEach(BodyMeasurementKind.allCases) { kind in
+                                MeasurementSummaryRow(
+                                    kind: kind,
+                                    valueCentimeters: measurements[keyPath: kind.keyPath],
+                                    metadata: measurementMetadata[kind.storageKey],
+                                    showsDivider: kind != .calfCircumference
+                                ) {
+                                    selectedGuide = kind
+                                }
+                            }
                         }
                         .glassCard()
 
@@ -1693,7 +1781,13 @@ private struct RefineTwinView: View {
                         updated.heightCentimeters = heightCentimeters
                         updated.weightKilograms = weightKilograms
                         updated.bodyMeasurements = measurements.isEmpty ? nil : measurements
-                        updated.measurementsUpdatedAt = measurements.isEmpty ? nil : .now
+                        updated.measurementMetadata = measurements.isEmpty || measurementMetadata.isEmpty
+                            ? nil
+                            : measurementMetadata
+                        updated.measurementsUpdatedAt = measurements.isEmpty
+                            ? nil
+                            : (measurementMetadata.values.map(\.recordedAt).max()
+                                ?? profile.measurementsUpdatedAt)
                         profileStore.update(updated)
                         dismiss()
                     }
@@ -1703,6 +1797,20 @@ private struct RefineTwinView: View {
             }
         }
         .preferredColorScheme(.dark)
+        .sheet(item: $selectedGuide) { kind in
+            GuidedMeasurementSheet(
+                kind: kind,
+                initialValueCentimeters: measurements[keyPath: kind.keyPath],
+                initialMetadata: measurementMetadata[kind.storageKey]
+            ) { valueCentimeters, metadata in
+                measurements[keyPath: kind.keyPath] = valueCentimeters
+                if let metadata {
+                    measurementMetadata[kind.storageKey] = metadata
+                } else {
+                    measurementMetadata.removeValue(forKey: kind.storageKey)
+                }
+            }
+        }
     }
 
     private func provenanceLabel(_ title: String, color: Color) -> some View {
@@ -1714,32 +1822,60 @@ private struct RefineTwinView: View {
     }
 }
 
-private struct MeasurementInputRow: View {
-    let title: String
-    @Binding var value: Double?
+private struct MeasurementSummaryRow: View {
+    let kind: BodyMeasurementKind
+    let valueCentimeters: Double?
+    let metadata: BodyMeasurementMetadata?
     var showsDivider = true
+    let action: () -> Void
+
+    private var displayValue: String {
+        guard let valueCentimeters else { return "Add" }
+        let unit = metadata?.unit ?? .centimeters
+        let value = unit == .centimeters ? valueCentimeters : valueCentimeters / 2.54
+        return value.formatted(.number.precision(.fractionLength(0...1))) + " " + unit.displayName
+    }
+
+    private var provenance: String {
+        guard let metadata else {
+            return valueCentimeters == nil ? "Guided protocol available" : "Legacy value · details not recorded"
+        }
+        var details: [String] = []
+        if kind.isBilateral {
+            details.append(metadata.side.displayName)
+        }
+        details.append(metadata.method.displayName)
+        details.append("\(metadata.confidence.displayName) confidence")
+        return details.joined(separator: " · ")
+    }
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 12) {
-                Text(title)
-                    .font(.subheadline)
-                Spacer()
-                TextField("—", value: $value, format: .number.precision(.fractionLength(0...1)))
-                    .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.trailing)
-                    .font(.body.monospacedDigit())
-                    .frame(width: 76)
-                    .padding(.vertical, 9)
-                    .padding(.horizontal, 10)
-                    .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
-                Text("cm")
-                    .font(.caption)
-                    .foregroundStyle(EidomeTheme.secondaryText)
-                    .frame(width: 22, alignment: .leading)
+            Button(action: action) {
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(kind.title)
+                            .font(.subheadline)
+                            .foregroundStyle(.white)
+                        Text(provenance)
+                            .font(.caption2)
+                            .foregroundStyle(EidomeTheme.secondaryText)
+                            .lineLimit(1)
+                    }
+                    Spacer()
+                    Text(displayValue)
+                        .font(.subheadline.bold().monospacedDigit())
+                        .foregroundStyle(valueCentimeters == nil ? EidomeTheme.cyan : .white)
+                    Image(systemName: "chevron.right")
+                        .font(.caption.bold())
+                        .foregroundStyle(EidomeTheme.secondaryText)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 7)
+            .buttonStyle(.plain)
+            .accessibilityLabel("\(kind.title), \(displayValue), \(provenance)")
+            .accessibilityHint("Opens the guided measurement protocol.")
 
             if showsDivider {
                 Rectangle()
@@ -1748,6 +1884,252 @@ private struct MeasurementInputRow: View {
                     .padding(.leading, 16)
             }
         }
+    }
+}
+
+private struct GuidedMeasurementSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let kind: BodyMeasurementKind
+    let initialValueCentimeters: Double?
+    let onSave: (Double?, BodyMeasurementMetadata?) -> Void
+
+    @State private var value: Double?
+    @State private var unit: MeasurementUnit
+    @State private var side: MeasurementSide
+    @State private var method: MeasurementMethod
+    @State private var confidence: MeasurementConfidence
+    @State private var recordedAt: Date
+
+    init(
+        kind: BodyMeasurementKind,
+        initialValueCentimeters: Double?,
+        initialMetadata: BodyMeasurementMetadata?,
+        onSave: @escaping (Double?, BodyMeasurementMetadata?) -> Void
+    ) {
+        self.kind = kind
+        self.initialValueCentimeters = initialValueCentimeters
+        self.onSave = onSave
+
+        let startingUnit = initialMetadata?.unit ?? .centimeters
+        let startingValue = initialValueCentimeters.map {
+            startingUnit == .centimeters ? $0 : $0 / 2.54
+        }
+        _value = State(initialValue: startingValue)
+        _unit = State(initialValue: startingUnit)
+        _side = State(initialValue: initialMetadata?.side ?? (kind.isBilateral ? .left : .center))
+        _method = State(initialValue: initialMetadata?.method ?? .selfTape)
+        _confidence = State(initialValue: initialMetadata?.confidence ?? .medium)
+        _recordedAt = State(initialValue: initialMetadata?.recordedAt ?? .now)
+    }
+
+    private var valueCentimeters: Double? {
+        value.map { unit == .centimeters ? $0 : $0 * 2.54 }
+    }
+
+    private var isValid: Bool {
+        guard let valueCentimeters else { return false }
+        return kind.validCentimeterRange.contains(valueCentimeters)
+    }
+
+    private var rangeDescription: String {
+        let range = kind.validCentimeterRange
+        if unit == .centimeters {
+            return "\(Int(range.lowerBound))–\(Int(range.upperBound)) cm"
+        }
+        return "\((range.lowerBound / 2.54).formatted(.number.precision(.fractionLength(1))))–\((range.upperBound / 2.54).formatted(.number.precision(.fractionLength(1)))) in"
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                EidomeTheme.backgroundGradient.ignoresSafeArea()
+                ScrollView {
+                    VStack(spacing: 16) {
+                        MeasurementLandmarkIllustration(kind: kind)
+                            .frame(height: 230)
+                            .glassCard()
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label("Landmark", systemImage: "scope")
+                                .font(.headline)
+                            Text(kind.landmark)
+                                .font(.subheadline)
+                                .foregroundStyle(EidomeTheme.secondaryText)
+                            Text("Keep the tape level and snug without compressing tissue. Repeat under similar conditions.")
+                                .font(.caption)
+                                .foregroundStyle(EidomeTheme.secondaryText)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(16)
+                        .glassCard()
+
+                        VStack(spacing: 14) {
+                            Picker("Unit", selection: $unit) {
+                                ForEach(MeasurementUnit.allCases) { unit in
+                                    Text(unit.displayName).tag(unit)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+
+                            HStack {
+                                TextField(
+                                    "Value",
+                                    value: $value,
+                                    format: .number.precision(.fractionLength(0...1))
+                                )
+                                .keyboardType(.decimalPad)
+                                .font(.title2.bold().monospacedDigit())
+                                .accessibilityLabel("\(kind.title) value")
+                                .accessibilityHint("Enter the measurement in \(unit.displayName).")
+                                Text(unit.displayName)
+                                    .foregroundStyle(EidomeTheme.secondaryText)
+                            }
+                            .padding(14)
+                            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
+
+                            if value != nil && !isValid {
+                                Label("Enter a plausible value within \(rangeDescription).", systemImage: "exclamationmark.triangle.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(.orange)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            } else {
+                                Text("Allowed range: \(rangeDescription)")
+                                    .font(.caption2)
+                                    .foregroundStyle(EidomeTheme.secondaryText)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
+                        .padding(16)
+                        .glassCard()
+
+                        VStack(spacing: 14) {
+                            if kind.isBilateral {
+                                Picker("Side", selection: $side) {
+                                    Text("Left").tag(MeasurementSide.left)
+                                    Text("Right").tag(MeasurementSide.right)
+                                }
+                                .pickerStyle(.segmented)
+                            }
+
+                            DatePicker("Measured", selection: $recordedAt, in: ...Date.now, displayedComponents: .date)
+
+                            Picker("Method", selection: $method) {
+                                ForEach(MeasurementMethod.allCases) { method in
+                                    Text(method.displayName).tag(method)
+                                }
+                            }
+
+                            Picker("Confidence", selection: $confidence) {
+                                ForEach(MeasurementConfidence.allCases) { confidence in
+                                    Text(confidence.displayName).tag(confidence)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                        }
+                        .padding(16)
+                        .glassCard()
+
+                        if initialValueCentimeters != nil {
+                            HStack(spacing: 12) {
+                                Button("Retake now") {
+                                    value = nil
+                                    recordedAt = .now
+                                    confidence = .medium
+                                }
+                                .buttonStyle(.bordered)
+
+                                Button("Clear measurement", role: .destructive) {
+                                    onSave(nil, nil)
+                                    dismiss()
+                                }
+                                .buttonStyle(.bordered)
+                            }
+                        }
+
+                        Text("This protocol improves repeatability; it does not turn the twin into a body scan or medical measurement device.")
+                            .font(.caption)
+                            .foregroundStyle(EidomeTheme.secondaryText)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .padding(20)
+                }
+            }
+            .foregroundStyle(.white)
+            .navigationTitle(kind.title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        guard let valueCentimeters else { return }
+                        let metadata = BodyMeasurementMetadata(
+                            recordedAt: recordedAt,
+                            unit: unit,
+                            side: kind.isBilateral ? side : .center,
+                            method: method,
+                            confidence: confidence
+                        )
+                        onSave(valueCentimeters, metadata)
+                        dismiss()
+                    }
+                    .fontWeight(.semibold)
+                    .disabled(!isValid)
+                }
+            }
+        }
+        .preferredColorScheme(.dark)
+        .onChange(of: unit) { oldUnit, newUnit in
+            guard let value else { return }
+            if oldUnit == .centimeters && newUnit == .inches {
+                self.value = value / 2.54
+            } else if oldUnit == .inches && newUnit == .centimeters {
+                self.value = value * 2.54
+            }
+        }
+    }
+}
+
+private struct MeasurementLandmarkIllustration: View {
+    let kind: BodyMeasurementKind
+
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack {
+                Image(systemName: "figure.stand")
+                    .resizable()
+                    .scaledToFit()
+                    .foregroundStyle(Color.white.opacity(0.72))
+                    .padding(.vertical, 18)
+
+                if kind == .inseam {
+                    Capsule()
+                        .fill(EidomeTheme.cyan)
+                        .frame(width: 4, height: proxy.size.height * 0.34)
+                        .position(
+                            x: proxy.size.width * 0.52,
+                            y: proxy.size.height * 0.72
+                        )
+                } else {
+                    Capsule()
+                        .fill(EidomeTheme.cyan)
+                        .frame(width: proxy.size.width * 0.42, height: 4)
+                        .position(
+                            x: proxy.size.width * 0.50,
+                            y: proxy.size.height * kind.cuePosition
+                        )
+                }
+
+                Image(systemName: kind == .inseam ? "arrow.up.and.down" : "arrow.left.and.right")
+                    .foregroundStyle(EidomeTheme.cyan)
+                    .position(
+                        x: proxy.size.width * (kind == .inseam ? 0.60 : 0.78),
+                        y: proxy.size.height * (kind == .inseam ? 0.72 : kind.cuePosition)
+                    )
+            }
+        }
+        .accessibilityHidden(true)
     }
 }
 

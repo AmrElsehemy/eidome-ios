@@ -1354,6 +1354,60 @@ struct TwinSceneView: UIViewRepresentable {
     }
 }
 
+struct TwinSceneControlBar: View {
+    @Binding var isCameraControlEnabled: Bool
+    let idlePrompt: String
+    let onReset: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(isCameraControlEnabled
+                 ? "Drag to rotate · Pinch to zoom"
+                 : idlePrompt)
+                .font(.caption)
+                .foregroundStyle(EidomeTheme.secondaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+
+            Spacer(minLength: 4)
+
+            if isCameraControlEnabled {
+                Button(action: onReset) {
+                    Image(systemName: "arrow.counterclockwise")
+                        .font(.caption.bold())
+                        .foregroundStyle(EidomeTheme.cyan)
+                        .frame(width: 44, height: 44)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Reset 3D view")
+
+                Button("Done") {
+                    isCameraControlEnabled = false
+                }
+                .font(.caption.bold())
+                .foregroundStyle(EidomeTheme.cyan)
+                .frame(minWidth: 44, minHeight: 44)
+                .buttonStyle(.plain)
+                .accessibilityHint("Returns vertical swipes to page scrolling.")
+            } else {
+                Button {
+                    isCameraControlEnabled = true
+                } label: {
+                    Label("Rotate 3D", systemImage: "view.3d")
+                        .font(.caption.bold())
+                        .foregroundStyle(EidomeTheme.cyan)
+                        .frame(minHeight: 44)
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Enables drag and pinch gestures on the model.")
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(EidomeTheme.panel.opacity(0.84), in: Capsule())
+    }
+}
+
 
 private struct AvatarDeformation {
     private static let referenceGeometry: BodyGeometry = {

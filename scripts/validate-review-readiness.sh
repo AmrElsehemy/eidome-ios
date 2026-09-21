@@ -70,8 +70,11 @@ grep -q 'Structure list unavailable' Eidome/Views/TwinHomeView.swift
 grep -q 'accessibilityLabel("Why this view matters")' Eidome/Views/TwinHomeView.swift
 grep -q 'presentationDetents(\[.medium, .large\])' Eidome/Views/TwinHomeView.swift
 grep -q 'sheet(item: \$explorerHelpProfile)' Eidome/Views/TwinHomeView.swift
-grep -q 'allowsCameraControl: isSceneCameraControlEnabled' Eidome/Views/TwinHomeView.swift
-grep -q 'Label("Rotate 3D", systemImage: "view.3d")' Eidome/Views/TwinHomeView.swift
+test "$(grep -c 'allowsCameraControl: isSceneCameraControlEnabled' Eidome/Views/TwinHomeView.swift)" -eq 2
+grep -q 'allowsCameraControl: isSceneCameraControlEnabled' Eidome/Views/MobilityEditorView.swift
+test "$(grep -c 'TwinSceneControlBar(' Eidome/Views/TwinHomeView.swift)" -eq 2
+grep -q 'TwinSceneControlBar(' Eidome/Views/MobilityEditorView.swift
+grep -q 'Label("Rotate 3D", systemImage: "view.3d")' Eidome/Body/TwinSceneView.swift
 grep -q 'Measurements shaping this estimate' Eidome/Views/TwinHomeView.swift
 grep -q 'initialGuide: requestedMeasurementGuide' Eidome/Views/TwinHomeView.swift
 grep -q 'BodyMeasurementKind.allCases.filter' Eidome/Views/TwinHomeView.swift

@@ -87,6 +87,11 @@ grep -q 'arrow.up.and.down' Eidome/Views/TwinHomeView.swift
 grep -q 'GuidedMeasurementSheet' Eidome/Views/TwinHomeView.swift
 grep -q 'Guideline 2.1' fastlane/metadata/review_information/notes.txt
 grep -q 'Physical-device recording' fastlane/metadata/review_information/notes.txt
+grep -q 'Tap Rotate 3D' fastlane/metadata/review_information/notes.txt
+grep -q -- '-eidomeScreenshotMuscles' Eidome/Views/TwinHomeView.swift
+grep -q -- '-eidomeScreenshotSkeleton' Eidome/Views/TwinHomeView.swift
+grep -q -- '-eidomeScreenshotJoints' Eidome/Views/TwinHomeView.swift
+test "$(grep -c 'simctl io.*screenshot' scripts/capture-app-store-screenshots.sh)" -eq 5
 KNOWLEDGE_COUNT=$(grep -c '^[[:space:]]*\.init(pattern:' Eidome/Views/TwinHomeView.swift)
 if (( KNOWLEDGE_COUNT < 50 )); then
   echo "Anatomy knowledge catalog must contain at least 50 curated entries; found ${KNOWLEDGE_COUNT}."

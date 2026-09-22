@@ -95,7 +95,7 @@ grep -q '3. Record mobility' Eidome/Views/WelcomeView.swift
 grep -q 'Your measurements describe you' Eidome/Views/WelcomeView.swift
 grep -q 'WHAT HAPPENS NEXT' Eidome/Views/CreateTwinView.swift
 grep -q 'Tap Rotate 3D to move the model' Eidome/Views/CreateTwinView.swift
-grep -q -- '-eidomeScreenshotTwin' Eidome/Models/ProfileStore.swift
+grep -q -- '-eidomeScreenshotTwin' Eidome/Services/ProfileStore.swift
 grep -q -- '-eidomeScreenshotMuscles' Eidome/Views/TwinHomeView.swift
 grep -q -- '-eidomeScreenshotSkeleton' Eidome/Views/TwinHomeView.swift
 grep -q -- '-eidomeScreenshotJoints' Eidome/Views/TwinHomeView.swift

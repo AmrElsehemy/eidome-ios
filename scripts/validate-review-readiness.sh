@@ -88,6 +88,13 @@ grep -q 'GuidedMeasurementSheet' Eidome/Views/TwinHomeView.swift
 grep -q 'Guideline 2.1' fastlane/metadata/review_information/notes.txt
 grep -q 'Physical-device recording' fastlane/metadata/review_information/notes.txt
 grep -q 'Tap Rotate 3D' fastlane/metadata/review_information/notes.txt
+grep -q 'Understand your body in one visual place' Eidome/Views/WelcomeView.swift
+grep -q '1. Build your body estimate' Eidome/Views/WelcomeView.swift
+grep -q '2. Explore reference anatomy' Eidome/Views/WelcomeView.swift
+grep -q '3. Record mobility' Eidome/Views/WelcomeView.swift
+grep -q 'Your measurements describe you' Eidome/Views/WelcomeView.swift
+grep -q 'WHAT HAPPENS NEXT' Eidome/Views/CreateTwinView.swift
+grep -q 'Tap Rotate 3D to move the model' Eidome/Views/CreateTwinView.swift
 grep -q -- '-eidomeScreenshotMuscles' Eidome/Views/TwinHomeView.swift
 grep -q -- '-eidomeScreenshotSkeleton' Eidome/Views/TwinHomeView.swift
 grep -q -- '-eidomeScreenshotJoints' Eidome/Views/TwinHomeView.swift

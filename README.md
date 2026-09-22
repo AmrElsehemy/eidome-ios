@@ -1,6 +1,6 @@
 # Eidome v0.20
 
-Eidome is a body-centric digital twin prototype for iPhone and iPad.
+Eidome is a body-centric digital twin app for iPhone and iPad.
 
 Official domain: [eidome.com](https://eidome.com)
 

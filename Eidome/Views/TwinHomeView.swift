@@ -255,8 +255,8 @@ struct TwinHomeView: View {
     @State private var isShowingDetails = false
     @State private var isRefiningTwin = false
     @State private var requestedMeasurementGuide: BodyMeasurementKind?
-    @State private var selectedLayer: TwinBodyLayer = .body
-    @State private var lastAnatomyLayer: TwinBodyLayer = .muscles
+    @State private var selectedLayer: TwinBodyLayer
+    @State private var lastAnatomyLayer: TwinBodyLayer
     @State private var sceneResetToken = 0
     @State private var isSceneCameraControlEnabled = false
     @State private var isEditingMobility = false
@@ -270,6 +270,29 @@ struct TwinHomeView: View {
     @State private var isShowingAnatomyBrowser = false
     @State private var anatomyRegion: AnatomyRegion = .wholeBody
     @State private var anatomyDetailFilter: AnatomyDetailFilter = .all
+
+    init() {
+        let initialLayer: TwinBodyLayer
+        #if DEBUG
+        let arguments = ProcessInfo.processInfo.arguments
+        if arguments.contains("-eidomeScreenshotMuscles") {
+            initialLayer = .muscles
+        } else if arguments.contains("-eidomeScreenshotSkeleton") {
+            initialLayer = .skeleton
+        } else if arguments.contains("-eidomeScreenshotJoints") {
+            initialLayer = .joints
+        } else {
+            initialLayer = .body
+        }
+        #else
+        initialLayer = .body
+        #endif
+
+        _selectedLayer = State(initialValue: initialLayer)
+        _lastAnatomyLayer = State(
+            initialValue: initialLayer == .skeleton ? .skeleton : .muscles
+        )
+    }
 
     var body: some View {
         ZStack {

@@ -41,12 +41,12 @@ struct WelcomeView: View {
                             detail: "Start with height and weight. Add measurements later to refine the exterior shape."
                         )
                         onboardingStep(
-                            icon: "figure.strengthtraining.traditional",
+                            icon: "square.grid.2x2",
                             title: "2. Explore reference anatomy",
                             detail: "Browse muscles, bones, and joints to understand where structures are and what they do."
                         )
                         onboardingStep(
-                            icon: "angle",
+                            icon: "ruler",
                             title: "3. Record mobility",
                             detail: "Save your own joint movement observations and keep them with this twin."
                         )

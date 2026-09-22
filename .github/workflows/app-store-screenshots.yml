@@ -10,6 +10,7 @@ on:
       - scripts/capture-app-store-screenshots.sh
 jobs:
   capture:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'release/')
     runs-on: macos-15
     timeout-minutes: 25
     steps:

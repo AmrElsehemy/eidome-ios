@@ -15,11 +15,11 @@ No account, credentials, subscription, sample file, or internet connection is re
 
 1. Launch Eidome and create a local profile.
 2. Open Body and review or add measurements that shape the estimated exterior model.
-3. Rotate and zoom the 3D model, change the view, leave the screen or app, and return to see the safe view restored.
+3. Tap Rotate 3D, rotate or zoom the model, then tap Done to return vertical gestures to page scrolling. Leave and return to confirm that the camera remains specific to that profile and workspace; Reset restores the default view.
 4. Open Anatomy, switch between Muscles and Skeleton, browse/search named structures, and select or isolate a structure.
 5. Open Joints and review or enter user-measured mobility observations.
 6. Create or switch to another local profile to verify that profile data and saved 3D views remain independent.
-7. Use Reset view to restore the deterministic default camera.
+7. Enable Rotate 3D and use Reset to restore the deterministic default camera.
 8. Open About, Privacy, Support, and Asset Acknowledgements, then review the in-app deletion controls.
 
 External services, tools, and platforms

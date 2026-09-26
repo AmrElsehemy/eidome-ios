@@ -1,5 +1,7 @@
 # Eidome v0.20
 
+Post-v0.20: [weekly release plan](docs/WEEKLY_RELEASE_PLAN.md), starting with [v0.21 discoverability / ASO](docs/DISCOVERABILITY_V0.21.md). These dated releases supersede the former v0.21–v0.25 feature assignments.
+
 Eidome is a body-centric digital twin prototype for iPhone and iPad.
 
 Official domain: [eidome.com](https://eidome.com)

@@ -12,6 +12,7 @@ Eidome's listing metadata, review notes, and screenshot pipeline live in this re
 | Bundle ID | ai.knowlly.eidome |
 | SKU | eidome-ios |
 | Primary category | Health & Fitness |
+| Secondary category | Education |
 | Made for Kids | No |
 | Copyright | 2026 Knowlly DMCC |
 | Release | Manual |
@@ -67,7 +68,7 @@ bundle exec fastlane ios upload_screenshots
 The App Store icon is embedded in the binary and appears in App Store Connect after Apple processes the first signed upload.
 
 1. Open `Eidome.xcodeproj`.
-2. Confirm version `0.0.7`, build `7`, bundle ID `ai.knowlly.eidome`, and automatic signing.
+2. Confirm the current approved marketing version in App Store Connect, choose the next valid version and a unique build number as required, and verify bundle ID `ai.knowlly.eidome` and automatic signing. Internal weekly milestone numbers are not App Store marketing versions. See `docs/WEEKLY_RELEASE_PLAN.md`.
 3. Run on physical iPhone and supported iPad.
 4. Choose **Product → Archive**.
 5. In Organizer, choose **Validate App**, then **Distribute App → App Store Connect → Upload**.

@@ -1,1 +1,1 @@
-body model,3D avatar,anatomy,mobility,measurements,fitness profile,digital twin,body tracking
+muscle,skeleton,bone,joint,mobility,measurements,avatar,human,reference,rotation,proportion

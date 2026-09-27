@@ -19,6 +19,7 @@ struct CreateTwinView: View {
                     header
                     identitySection
                     bodySection
+                    nextStep
                     trustNote
 
                     Button(draft.relationship == .me ? "Generate My Twin" : "Generate Twin") {
@@ -52,7 +53,7 @@ struct CreateTwinView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Create your twin")
                 .font(.largeTitle.bold())
-            Text("A few details are enough to create your first body estimate.")
+            Text("These starting details create the exterior estimate you will explore and refine.")
                 .foregroundStyle(EidomeTheme.secondaryText)
         }
     }
@@ -107,6 +108,19 @@ struct CreateTwinView: View {
                 range: 15...250
             )
         }
+        .padding(20)
+        .glassCard()
+    }
+
+    private var nextStep: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            fieldLabel("WHAT HAPPENS NEXT")
+            Label("Your twin opens in Body, where you can see which measurements shape the estimate.", systemImage: "figure.stand")
+            Label("Switch to Anatomy or Joints to browse reference structures or record mobility.", systemImage: "square.grid.2x2")
+            Label("Tap Rotate 3D to move the model; tap Done when you want to scroll the page.", systemImage: "view.3d")
+        }
+        .font(.footnote)
+        .foregroundStyle(EidomeTheme.secondaryText)
         .padding(20)
         .glassCard()
     }

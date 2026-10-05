@@ -20,3 +20,7 @@ fastlane/api_key.json
 .mcp.json
 CLAUDE.md
 opencode.json
+
+# Local release builds and generated App Store captures
+.derived-data/
+fastlane/screenshots/

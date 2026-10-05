@@ -16,6 +16,11 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 device_udid() {
+  # Accept an exact UUID when duplicate device names span installed runtimes.
+  if [[ "$1" =~ ^[0-9A-Fa-f-]{36}$ ]]; then
+    printf '%s\n' "$1"
+    return
+  fi
   xcrun simctl list devices available | awk -v target="$1" 'index($0,target " ("){match($0,/[0-9A-F-]{36}/);if(RSTART){print substr($0,RSTART,RLENGTH);exit}}'
 }
 
@@ -44,27 +49,27 @@ capture() {
 
   xcrun simctl launch "$udid" "$BUNDLE_ID"
   sleep 3
-  xcrun simctl io "$udid" screenshot "$OUTPUT_DIR/${prefix}-01-welcome.png"
+  xcrun simctl io "$udid" screenshot "$OUTPUT_DIR/${prefix}-05-welcome.png"
 
   xcrun simctl terminate "$udid" "$BUNDLE_ID"
   xcrun simctl launch "$udid" "$BUNDLE_ID" -eidomeScreenshotTwin
   sleep 4
-  xcrun simctl io "$udid" screenshot "$OUTPUT_DIR/${prefix}-02-body.png"
+  xcrun simctl io "$udid" screenshot "$OUTPUT_DIR/${prefix}-03-body.png"
 
   xcrun simctl terminate "$udid" "$BUNDLE_ID"
   xcrun simctl launch "$udid" "$BUNDLE_ID" -eidomeScreenshotTwin -eidomeScreenshotMuscles
   sleep 5
-  xcrun simctl io "$udid" screenshot "$OUTPUT_DIR/${prefix}-03-muscles.png"
+  xcrun simctl io "$udid" screenshot "$OUTPUT_DIR/${prefix}-01-muscles.png"
 
   xcrun simctl terminate "$udid" "$BUNDLE_ID"
   xcrun simctl launch "$udid" "$BUNDLE_ID" -eidomeScreenshotTwin -eidomeScreenshotSkeleton
   sleep 5
-  xcrun simctl io "$udid" screenshot "$OUTPUT_DIR/${prefix}-04-skeleton.png"
+  xcrun simctl io "$udid" screenshot "$OUTPUT_DIR/${prefix}-02-skeleton.png"
 
   xcrun simctl terminate "$udid" "$BUNDLE_ID"
   xcrun simctl launch "$udid" "$BUNDLE_ID" -eidomeScreenshotTwin -eidomeScreenshotJoints
   sleep 5
-  xcrun simctl io "$udid" screenshot "$OUTPUT_DIR/${prefix}-05-joints.png"
+  xcrun simctl io "$udid" screenshot "$OUTPUT_DIR/${prefix}-04-joints.png"
 
   xcrun simctl terminate "$udid" "$BUNDLE_ID"
   xcrun simctl status_bar "$udid" clear

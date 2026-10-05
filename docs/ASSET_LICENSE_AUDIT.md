@@ -71,3 +71,17 @@ notice, ShareAlike declaration, and exportable model-plus-notice package. No
 blanket claim that all Z-Anatomy content is non-commercial is supported. The
 remaining issue is upstream provenance certainty, not missing in-app
 attribution work.
+
+
+## Source inspection — October 5, 2026
+
+Inspected the locally retained pinned `Startup.blend` in Blender 5.2.1 without saving it. All 397 source names from the committed export manifest matched source mesh objects. Neither those objects nor their mesh data exposed an author, source, copyright or licence custom-property key. The full source contains 4,569 mesh objects. This inspection does not resolve per-object provenance; #61 remains open.
+
+Inspected the installed `elvs_male_swim_shorts1.mhclo`: author `Elvaerwyn`, UUID `9f77bb95-bcb6-42e8-8472-8ba4ceffca88`, licence header `CC-by`, no version. No separate licence file was present in that installed asset directory. The original asset page could not be retrieved. The [MakeHuman repository FAQ](https://static.makehumancommunity.org/oldsite/faq/what_do_i_need_to_do_when_i_use_a_ccby_asset.html) points to CC BY 4.0 but explicitly describes itself as third-party interpretation; this is supporting context, not an author-specific version confirmation.
+
+Exact bundled files inspected:
+
+- Anatomy SHA-256: `97df79efe358fffc7296788976c063f162b3c6883a75c4233bb75db7d7477dc6`
+- Exterior avatar SHA-256: `9355def23f4eaa930bf9f17fe7e5a0bd043619e68c467ec7f0caec3ec304a674`
+
+Next concrete resolution: obtain source-specific confirmation or replace uncertain components with documented assets, then rerun geometry and visual validation. Do not substitute a checksum/name match for provenance clearance.

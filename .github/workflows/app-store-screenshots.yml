@@ -1,8 +1,16 @@
 name: App Store Screenshots
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [master]
+    paths:
+      - .github/workflows/app-store-screenshots.yml
+      - Eidome/**
+      - Eidome.xcodeproj/**
+      - scripts/capture-app-store-screenshots.sh
 jobs:
   capture:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'release/')
     runs-on: macos-15
     timeout-minutes: 25
     steps:

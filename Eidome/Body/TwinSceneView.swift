@@ -634,9 +634,14 @@ struct TwinSceneView: UIViewRepresentable {
             camera.camera = SCNCamera()
         }
         camera.camera?.fieldOfView = 31
+        // Use an explicit vertical FOV and height-scaled distance so the default
+        // full-body view has headroom across profile heights and viewport sizes.
+        camera.camera?.projectionDirection = .vertical
         if cameraState == nil {
             camera.transform = SCNMatrix4Identity
-            camera.position = SCNVector3(0, 0.08, 3.45)
+            let bodyHeight = BodyGeometry(profile: profile).totalHeight
+            let distance = max(3.8, bodyHeight * 2.5 + 0.3)
+            camera.position = SCNVector3(0, 0.08, distance)
             camera.look(at: SCNVector3(0, 0.02, 0))
         }
         scene.rootNode.addChildNode(camera)

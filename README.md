@@ -1,4 +1,6 @@
-# Eidome v0.20
+# Eidome
+
+See [what’s new in v0.21](CHANGELOG.md) (release candidate; not yet submitted).
 
 Post-v0.20: [weekly release plan](docs/WEEKLY_RELEASE_PLAN.md), starting with [v0.21 discoverability / ASO](docs/DISCOVERABILITY_V0.21.md). These dated releases supersede the former v0.21–v0.25 feature assignments.
 

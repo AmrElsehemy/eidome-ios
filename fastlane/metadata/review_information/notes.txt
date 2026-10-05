@@ -1,8 +1,3 @@
-Guideline 2.1 — Information Needed
-
-Physical-device recording
-A screen recording captured on a supported physical iPhone running the latest available iOS version is provided in the Resolution Center reply accompanying this submission. It begins with launching Eidome from the Home Screen and demonstrates the typical user flow and principal features.
-
 Eidome has no account registration or login, public user-generated content, paid content, subscriptions, or in-app purchases.
 
 Purpose, audience, and value

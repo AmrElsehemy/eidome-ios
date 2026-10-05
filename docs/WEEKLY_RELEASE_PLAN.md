@@ -31,3 +31,7 @@ If review or a quality gate blocks release, record the blocker and next date in 
 Record the exact commit, marketing version/build, supported territories, CI/asset/device checks, metadata and screenshot revision, public URL and live time. Keep #6/#61/#65 checks open until evidenced. Validate support/privacy URLs and clean install/upgrade/profile deletion. App Store submission is not public release, and merging listing copy does not prove indexing improved.
 
 Measure App Store Search impressions, product-page views, downloads and conversion using comparable territory/date windows and documented denominators. Use existing App Store analytics; do not add tracking SDKs for this pass. Flag insufficient samples and unavailable metrics. Follow the search checks in [DISCOVERABILITY_V0.21.md](DISCOVERABILITY_V0.21.md).
+
+## October 5 recovery update
+
+The user confirms nothing has been submitted. The September 30 / October 2 target was missed during preparation, not Apple review. PR #73 consolidates the launch candidate; see [the changelog](../CHANGELOG.md) for changes, validation and remaining gates. The recovery target is October 7 submission / October 9 public availability, conditional on completing those gates and Apple approval. Use that slot for v0.21 rather than overlapping a separate v0.22 submission. The table above preserves the original plan; redate follow-on milestones once this candidate's submission is established.

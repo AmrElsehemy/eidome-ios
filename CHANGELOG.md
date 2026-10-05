@@ -1,0 +1,21 @@
+# Changelog
+
+## v0.21 — Discoverability and launch polish (unreleased)
+
+Internal release label; the candidate currently uses App Store version 1.0, build 20. Confirm the next valid version and unique build in App Store Connect before upload. Merging this work is not an App Store submission or public release.
+
+### What’s new
+
+- Clearer, scrollable onboarding explains the body estimate, reference anatomy and mobility recording before creating a twin. Privacy & About remains available before entering personal data.
+- Twin creation now explains the next steps, including switching layers and using Rotate 3D / Done to move the model and return to page scrolling.
+- The default Body camera scales with profile height and uses an explicit vertical field of view, fixing cropped heads in the initial view while preserving saved camera views and explicit Reset.
+- Anatomy-first listing preparation: Muscles, Skeleton, Body, Joints, then Welcome. Automated captures cover iPhone and iPad and accept exact simulator identifiers.
+- Discoverability metadata prepared in #72: Eidome keeps its name, with subtitle “3D Anatomy & Body Explorer”, revised keywords and anatomy-led copy, and Education as the secondary category. These repository changes are not evidence of a live listing update.
+
+### Validation and remaining release work
+
+Candidate implementation: [PR #73](https://github.com/AmrElsehemy/eidome-ios/pull/73), incorporating the launch preparation from #63. Both GitHub build/archive and screenshot capture passed on `f7d3268aabacdb65fe414967550b9de69cb82184`. Local Release archive, static analysis, readiness validation and both bundled SceneKit asset-loading checks passed; corrected iPhone Body framing was visually verified. Full screenshot acceptance and physical-device/accessibility checks remain outstanding.
+
+Nothing has been submitted, as confirmed October 5, 2026. Asset provenance/licence clearance remains open in [#61](https://github.com/AmrElsehemy/eidome-ios/issues/61); the source inspection is documented in [the asset audit](docs/ASSET_LICENSE_AUDIT.md). Complete the [submission checklist](APP_STORE_SUBMISSION.md), confirm the Connect version/build, upload a signed build and approved listing assets, and submit for review before claiming readiness or release.
+
+See [release operations #71](https://github.com/AmrElsehemy/eidome-ios/issues/71) and the [weekly plan](docs/WEEKLY_RELEASE_PLAN.md) for scheduling. October 7 submission / October 9 public availability is the recovery target, conditional on release gates and Apple approval.

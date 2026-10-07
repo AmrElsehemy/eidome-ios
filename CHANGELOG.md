@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.23 — Anatomy navigation (in development)
+
+- Focus a selected structure, restore surrounding anatomy or clear selection beside the model. Current filters and saved camera views remain intact.
+- Explain that left/right refers to the displayed body; action controls stack when horizontal space is limited.
+
 ## v0.22 — Anatomy clarity (in development)
 
 - Put the anatomy model ahead of optional filters; expand Filters to choose a region or tissue type. The collapsed summary retains the current filter choices.

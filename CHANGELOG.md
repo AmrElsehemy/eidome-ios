@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.22 — Anatomy clarity (in development)
+
+- Put the anatomy model ahead of optional filters; expand Filters to choose a region or tissue type. The collapsed summary retains the current filter choices.
+- Show selected structure names and side directly beneath the model, before the camera controls.
+- Use explicit muscle/bone headings and explain that the anatomy is a reference, not a scan.
+
+Eidome 1.0.1 is live, confirmed by the owner October 7. These changes are for the next update and have not been submitted.
+
 ## v0.21 — Discoverability and launch polish (unreleased)
 
 Internal release label; the candidate currently uses App Store version 1.0, build 20. Confirm the next valid version and unique build in App Store Connect before upload. Merging this work is not an App Store submission or public release.

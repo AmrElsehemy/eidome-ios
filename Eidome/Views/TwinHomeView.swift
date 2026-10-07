@@ -269,6 +269,7 @@ struct TwinHomeView: View {
     @State private var hasPublishedStructureCatalog = false
     @State private var isShowingAnatomyBrowser = false
     @State private var anatomyRegion: AnatomyRegion = .wholeBody
+    @State private var showsAnatomyFilters = false
     @State private var anatomyDetailFilter: AnatomyDetailFilter = .all
 
     init() {
@@ -439,8 +440,17 @@ struct TwinHomeView: View {
             if selectedMode == .anatomy {
                 anatomyLayerPicker
                     .transition(.opacity.combined(with: .move(edge: .top)))
-                anatomyFilters
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+                DisclosureGroup(isExpanded: $showsAnatomyFilters) {
+                    anatomyFilters
+                } label: {
+                    Text(selectedLayer == .muscles
+                         ? "Filters · \(anatomyRegion.rawValue) · \(anatomyDetailFilter.rawValue)"
+                         : "Filters · \(anatomyRegion.rawValue)")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(EidomeTheme.secondaryText)
+                }
+                .tint(EidomeTheme.cyan)
+                .padding(.horizontal, 22)
             }
 
             TwinSceneView(
@@ -467,6 +477,21 @@ struct TwinHomeView: View {
             )
             .frame(height: selectedMode == .body ? 380 : 420)
             .id(profile.id)
+
+            if selectedMode == .anatomy, let selection = selectedStructure {
+                VStack(spacing: 4) {
+                    Text(selection.name)
+                        .font(.headline)
+                        .multilineTextAlignment(.center)
+                    Text([selection.side?.rawValue, "Reference anatomy"]
+                        .compactMap { $0 }.joined(separator: " · "))
+                        .font(.caption)
+                        .foregroundStyle(EidomeTheme.cyan)
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 22)
+                .accessibilityElement(children: .combine)
+            }
 
             TwinSceneControlBar(
                 isCameraControlEnabled: $isSceneCameraControlEnabled,
@@ -565,7 +590,7 @@ struct TwinHomeView: View {
     private var explorerTitle: String {
         switch selectedMode {
         case .body: "Your body"
-        case .anatomy: "Explore what is underneath"
+        case .anatomy: selectedLayer == .muscles ? "Explore muscles" : "Identify bones"
         case .joints: "How you move"
         }
     }
@@ -575,7 +600,7 @@ struct TwinHomeView: View {
         case .body:
             "See how your measurements shape this estimate."
         case .anatomy:
-            "Inspect reference structures, then connect them to movement."
+            "Tap a structure to learn its name and role in movement. Reference anatomy, not a scan."
         case .joints:
             "Review estimated joint locations and add your mobility ranges."
         }

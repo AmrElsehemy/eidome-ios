@@ -491,6 +491,17 @@ struct TwinHomeView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 22)
                 .accessibilityElement(children: .combine)
+
+                Text("Left and right refer to the body shown, not the screen.")
+                    .font(.caption)
+                    .foregroundStyle(EidomeTheme.secondaryText)
+                    .padding(.horizontal, 22)
+
+                ViewThatFits(in: .horizontal) {
+                    HStack { anatomySelectionActions(selection) }
+                    VStack { anatomySelectionActions(selection) }
+                }
+                .padding(.horizontal, 22)
             }
 
             TwinSceneControlBar(
@@ -550,6 +561,22 @@ struct TwinHomeView: View {
             }
         }
         .padding(.top, 12)
+    }
+
+    @ViewBuilder
+    private func anatomySelectionActions(_ selection: AnatomySelection) -> some View {
+        Button(focusedStructure == selection ? "Show surrounding anatomy" : "Focus structure") {
+            focusedStructure = focusedStructure == selection ? nil : selection
+        }
+        .buttonStyle(.bordered)
+        .accessibilityHint("Changes emphasis without changing your saved camera view or filters.")
+
+        Button("Clear selection") {
+            selectedStructure = nil
+            focusedStructure = nil
+        }
+        .buttonStyle(.bordered)
+        .accessibilityHint("Removes the selection and restores surrounding anatomy within the current filters.")
     }
 
     private var explorerContextHeader: some View {

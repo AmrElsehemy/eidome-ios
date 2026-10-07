@@ -14,7 +14,7 @@ struct MobilityEditorView: View {
     }
 
     private var invalidValueCount: Int {
-        mobility.values.filter { $0 < 0 || $0 > 220 }.count
+        mobility.values.filter { !$0.isFinite || $0 < 0 || $0 > 220 }.count
     }
 
     var body: some View {
@@ -46,6 +46,16 @@ struct MobilityEditorView: View {
                                 .foregroundStyle(EidomeTheme.secondaryText)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
+
+                        Text("Left and right refer to \(profile.name)’s body. Values are in degrees; an empty field means unknown, while 0° is a recorded value.")
+                            .font(.caption)
+                            .foregroundStyle(EidomeTheme.secondaryText)
+
+                        if invalidValueCount > 0 {
+                            Label("Correct \(invalidValueCount) invalid value(s) before saving. Enter a number from 0° to 220°, or clear the field. This is an input limit, not a normal range.", systemImage: "exclamationmark.circle")
+                                .font(.callout)
+                                .foregroundStyle(.orange)
+                        }
 
                         mobilityCard(
                             title: "Ankle dorsiflexion",
@@ -143,8 +153,8 @@ struct MobilityEditorView: View {
                 .font(.caption2)
                 .foregroundStyle(EidomeTheme.secondaryText)
             HStack(spacing: 12) {
-                AngleInput(label: "LEFT", value: left)
-                AngleInput(label: "RIGHT", value: right)
+                AngleInput(movement: title, label: "Left", value: left)
+                AngleInput(movement: title, label: "Right", value: right)
             }
         }
         .padding(16)
@@ -153,6 +163,7 @@ struct MobilityEditorView: View {
 }
 
 private struct AngleInput: View {
+    let movement: String
     let label: String
     @Binding var value: Double?
 
@@ -164,6 +175,8 @@ private struct AngleInput: View {
                 .foregroundStyle(EidomeTheme.secondaryText)
             HStack {
                 TextField("—", value: $value, format: .number.precision(.fractionLength(0...1)))
+                    .accessibilityLabel("\(movement), \(label), degrees")
+                    .accessibilityHint("Leave empty if unknown. Zero is a recorded measurement.")
                     .keyboardType(.decimalPad)
                     .font(.title3.bold().monospacedDigit())
                 Text("°")
@@ -171,6 +184,16 @@ private struct AngleInput: View {
             }
             .padding(12)
             .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
+            if let entered = value, !entered.isFinite || entered < 0 || entered > 220 {
+                Text("Enter 0°–220° or clear")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
+            if value != nil {
+                Button("Clear") { value = nil }
+                    .font(.caption)
+                    .accessibilityLabel("Clear \(label) \(movement)")
+            }
         }
         .frame(maxWidth: .infinity)
     }

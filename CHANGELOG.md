@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.24 — Mobility entry clarity (in development)
+
+- Explain whose left/right is being entered and distinguish unknown values from a recorded zero.
+- Explain invalid values beside their fields and why Save is unavailable; reject non-finite values. The numeric limit is not presented as a normal clinical range.
+- Add explicit per-side clear actions and movement/side/unit labels for assistive technology. Existing storage and profile handling are unchanged.
+
 ## v0.23 — Anatomy navigation (in development)
 
 - Focus a selected structure, restore surrounding anatomy or clear selection beside the model. Current filters and saved camera views remain intact.

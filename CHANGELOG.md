@@ -1,5 +1,24 @@
 # Changelog
 
+## v0.24 — Mobility entry clarity (in development)
+
+- Explain whose left/right is being entered and distinguish unknown values from a recorded zero.
+- Explain invalid values beside their fields and why Save is unavailable; reject non-finite values. The numeric limit is not presented as a normal clinical range.
+- Add explicit per-side clear actions and movement/side/unit labels for assistive technology. Existing storage and profile handling are unchanged.
+
+## v0.23 — Anatomy navigation (in development)
+
+- Focus a selected structure, restore surrounding anatomy or clear selection beside the model. Current filters and saved camera views remain intact.
+- Explain that left/right refers to the displayed body; action controls stack when horizontal space is limited.
+
+## v0.22 — Anatomy clarity (in development)
+
+- Put the anatomy model ahead of optional filters; expand Filters to choose a region or tissue type. The collapsed summary retains the current filter choices.
+- Show selected structure names and side directly beneath the model, before the camera controls.
+- Use explicit muscle/bone headings and explain that the anatomy is a reference, not a scan.
+
+Eidome 1.0.1 is live, confirmed by the owner October 7. These changes are for the next update and have not been submitted.
+
 ## v0.21 — Discoverability and launch polish (unreleased)
 
 Internal release label; the candidate currently uses App Store version 1.0, build 20. Confirm the next valid version and unique build in App Store Connect before upload. Merging this work is not an App Store submission or public release.

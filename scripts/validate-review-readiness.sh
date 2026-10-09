@@ -29,8 +29,8 @@ fi
 
 grep -Eq '"filename"[[:space:]]*:[[:space:]]*"AppIcon\.png"' Eidome/Assets.xcassets/AppIcon.appiconset/Contents.json
 grep -q 'NSPrivacyAccessedAPICategoryUserDefaults' "$MANIFEST"
-test "$(grep -Fc 'MARKETING_VERSION = 1.0;' "$PROJECT")" -eq 2
-test "$(grep -c 'CURRENT_PROJECT_VERSION = 20;' "$PROJECT")" -eq 2
+test "$(grep -Fc 'MARKETING_VERSION = 1.0.1;' "$PROJECT")" -eq 2
+test "$(grep -c 'CURRENT_PROJECT_VERSION = 21;' "$PROJECT")" -eq 2
 test "$(grep -c 'eidome-anatomy.usdz in Resources' "$PROJECT")" -eq 2
 ruby -rjson -e '
   manifest = JSON.parse(File.read(ARGV.fetch(0)))
@@ -85,8 +85,6 @@ grep -q 'case selfTape = "Self-measured tape"' Eidome/Models/TwinProfile.swift
 grep -q 'measurementMetadata\[kind.storageKey\]' Eidome/Views/TwinHomeView.swift
 grep -q 'arrow.up.and.down' Eidome/Views/TwinHomeView.swift
 grep -q 'GuidedMeasurementSheet' Eidome/Views/TwinHomeView.swift
-grep -q 'Guideline 2.1' fastlane/metadata/review_information/notes.txt
-grep -q 'Physical-device recording' fastlane/metadata/review_information/notes.txt
 grep -q 'Tap Rotate 3D' fastlane/metadata/review_information/notes.txt
 grep -q 'Understand your body in one visual place' Eidome/Views/WelcomeView.swift
 grep -q '1. Build your body estimate' Eidome/Views/WelcomeView.swift

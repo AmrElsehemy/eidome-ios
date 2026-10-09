@@ -1,0 +1,4 @@
+- Clearer, scrollable onboarding that explains the body estimate, reference anatomy and mobility recording before you create a twin.
+- Explore Muscles, Skeleton, Body and Joints with named structures you can browse and select.
+- Fixed the default Body view so heads are no longer cropped, with framing that scales to profile height.
+- Rotate 3D / Done makes it easier to move the model and return to page scrolling.

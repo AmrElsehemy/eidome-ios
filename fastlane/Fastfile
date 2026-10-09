@@ -36,7 +36,7 @@ platform :ios do
 
   desc "Upload generated App Store screenshots only"
   lane :upload_screenshots do
-    UI.user_error!("No screenshots found. Run scripts/capture-app-store-screenshots.sh first.") if Dir["fastlane/screenshots/**/*.png"].empty?
+    UI.user_error!("No screenshots found. Run scripts/capture-app-store-screenshots.sh first.") if Dir[File.join(__dir__, "screenshots", "**", "*.png")].empty?
 
     deliver(**eidome_deliver_options.merge(
       skip_metadata: true,
@@ -47,7 +47,7 @@ platform :ios do
 
   desc "Upload App Store text metadata and screenshots"
   lane :upload_release_assets do
-    UI.user_error!("No screenshots found. Run scripts/capture-app-store-screenshots.sh first.") if Dir["fastlane/screenshots/**/*.png"].empty?
+    UI.user_error!("No screenshots found. Run scripts/capture-app-store-screenshots.sh first.") if Dir[File.join(__dir__, "screenshots", "**", "*.png")].empty?
 
     deliver(**eidome_deliver_options.merge(
       skip_metadata: false,

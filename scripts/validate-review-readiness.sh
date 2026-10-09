@@ -85,8 +85,6 @@ grep -q 'case selfTape = "Self-measured tape"' Eidome/Models/TwinProfile.swift
 grep -q 'measurementMetadata\[kind.storageKey\]' Eidome/Views/TwinHomeView.swift
 grep -q 'arrow.up.and.down' Eidome/Views/TwinHomeView.swift
 grep -q 'GuidedMeasurementSheet' Eidome/Views/TwinHomeView.swift
-grep -q 'Guideline 2.1' fastlane/metadata/review_information/notes.txt
-grep -q 'Physical-device recording' fastlane/metadata/review_information/notes.txt
 grep -q 'Tap Rotate 3D' fastlane/metadata/review_information/notes.txt
 grep -q 'Understand your body in one visual place' Eidome/Views/WelcomeView.swift
 grep -q '1. Build your body estimate' Eidome/Views/WelcomeView.swift

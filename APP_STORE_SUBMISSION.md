@@ -2,8 +2,9 @@
 
 ## Automated in CI
 
+- Profile persistence/return-state regression checks
 - Debug build, static analysis, and unsigned Release archive
-- Version/build check for 1.0 (20)
+- Version/build check for 1.0.3 (23)
 - 1024×1024 icon and privacy-manifest validation
 - Required listing metadata and URL validation
 - Deterministic iPhone/iPad screenshots covering onboarding, Body, Muscles, Skeleton, and Joints
@@ -18,7 +19,7 @@
 - Test create, edit, switch, individual-delete, and delete-all on physical iPhone
 - Test supported iPad layout or explicitly switch to iPhone-only
 - Verify VoiceOver, Dynamic Type, contrast, and reduced motion
-- Confirm build 20 is greater than every build already uploaded for version 1.0
+- Confirm candidate build 23 is greater than every build already uploaded; choose a higher build if needed
 - Archive with automatic signing and upload the signed build
 - Attach a fresh physical-device recording showing the shipping Rotate 3D interaction to the Resolution Center reply
 - Complete age rating, privacy, and export-compliance answers from the shipping binary
@@ -38,3 +39,13 @@
 11. Confirm no missing-symbol or application Auto Layout errors.
 
 SceneKit's `focusItemsInRect` simulator notice is framework noise, not an app failure.
+
+## 1.0.3 return-experience acceptance
+
+- Clean install: Privacy & About and support before entry; creation with a blank name explains the missing input; Cancel returns to Welcome; valid creation opens Body.
+- Upgrade from 1.0.2: profile IDs, measurements, mobility values and saved camera views survive. Until a layer is chosen, the profile opens Body.
+- Choose a different layer for two profiles, rotate/zoom each, background/relaunch, switch between them and confirm the selected profile, last layer and each saved camera view.
+- Select/focus/hide anatomy, open filters and enable Rotate 3D, then switch profiles: transient anatomy state clears and page scrolling works immediately.
+- Delete the selected profile: the remaining profile opens its own layer. Delete all: Welcome returns; relaunch remains empty.
+- Verify small iPhone and iPad, largest accessibility text, VoiceOver focus order/labels, and Reduce Motion.
+- Review updated iPhone/iPad screenshots and available retention/feedback evidence. Record missing metrics rather than inventing results.

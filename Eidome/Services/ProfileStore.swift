@@ -1,16 +1,23 @@
 import Foundation
+import Combine
 
 @MainActor
 final class ProfileStore: ObservableObject {
     @Published private(set) var profiles: [TwinProfile] = []
-    @Published var selectedProfileID: UUID?
+    @Published private(set) var selectedProfileID: UUID?
+    @Published private(set) var explorerLayers: [UUID: TwinBodyLayer] = [:]
+
+    private let defaults: UserDefaults
 
     private let profilesKey = "eidome.twin-profiles.v1"
     private let selectedProfileKey = "eidome.selected-profile.v1"
     private let legacyProfilesKey = "soma.twin-profiles.v1"
     private let legacySelectedProfileKey = "soma.selected-profile.v1"
 
-    init() {
+    private let explorerLayersKey = "eidome.explorer-layers.v1"
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-eidomeScreenshotTwin") {
             let profile = Self.screenshotProfile
@@ -26,6 +33,17 @@ final class ProfileStore: ObservableObject {
         profiles.first(where: { $0.id == selectedProfileID }) ?? profiles.first
     }
 
+    var selectedExplorerLayer: TwinBodyLayer {
+        guard let id = selectedProfile?.id else { return .body }
+        return explorerLayers[id] ?? .body
+    }
+
+    func selectExplorerLayer(_ layer: TwinBodyLayer) {
+        guard let id = selectedProfile?.id else { return }
+        explorerLayers[id] = layer
+        save()
+    }
+
     func add(_ profile: TwinProfile) {
         profiles.append(profile)
         selectedProfileID = profile.id
@@ -33,6 +51,7 @@ final class ProfileStore: ObservableObject {
     }
 
     func select(_ profile: TwinProfile) {
+        guard profiles.contains(where: { $0.id == profile.id }) else { return }
         selectedProfileID = profile.id
         save()
     }
@@ -46,6 +65,7 @@ final class ProfileStore: ObservableObject {
     func delete(_ profile: TwinProfile) {
         TwinCameraStateStore.removeAll(profileID: profile.id)
         profiles.removeAll { $0.id == profile.id }
+        explorerLayers.removeValue(forKey: profile.id)
 
         if selectedProfileID == profile.id || selectedProfile == nil {
             selectedProfileID = profiles.first?.id
@@ -55,17 +75,17 @@ final class ProfileStore: ObservableObject {
     }
 
     func deleteAllData() {
+        profiles.forEach { TwinCameraStateStore.removeAll(profileID: $0.id) }
         TwinCameraStateStore.removeAll()
         profiles = []
         selectedProfileID = nil
+        explorerLayers = [:]
 
-        let defaults = UserDefaults.standard
-        [profilesKey, selectedProfileKey, legacyProfilesKey, legacySelectedProfileKey]
+        [profilesKey, selectedProfileKey, legacyProfilesKey, legacySelectedProfileKey, explorerLayersKey]
             .forEach { defaults.removeObject(forKey: $0) }
     }
 
     private func load() {
-        let defaults = UserDefaults.standard
         let data = defaults.data(forKey: profilesKey) ?? defaults.data(forKey: legacyProfilesKey)
         guard
             let data,
@@ -78,21 +98,31 @@ final class ProfileStore: ObservableObject {
         if let rawID {
             selectedProfileID = UUID(uuidString: rawID)
         }
-        if selectedProfile == nil {
+        if !profiles.contains(where: { $0.id == selectedProfileID }) {
             selectedProfileID = profiles.first?.id
+        }
+        if let savedLayers = defaults.dictionary(forKey: explorerLayersKey) as? [String: String] {
+            for (rawID, rawLayer) in savedLayers {
+                guard let id = UUID(uuidString: rawID),
+                      profiles.contains(where: { $0.id == id }),
+                      let layer = TwinBodyLayer(rawValue: rawLayer) else { continue }
+                explorerLayers[id] = layer
+            }
         }
         save()
     }
 
     private func save() {
+        let layers = Dictionary(uniqueKeysWithValues: explorerLayers.map { ($0.key.uuidString, $0.value.rawValue) })
+        defaults.set(layers, forKey: explorerLayersKey)
         if let data = try? JSONEncoder().encode(profiles) {
-            UserDefaults.standard.set(data, forKey: profilesKey)
+            defaults.set(data, forKey: profilesKey)
         }
 
         if let selectedProfileID {
-            UserDefaults.standard.set(selectedProfileID.uuidString, forKey: selectedProfileKey)
+            defaults.set(selectedProfileID.uuidString, forKey: selectedProfileKey)
         } else {
-            UserDefaults.standard.removeObject(forKey: selectedProfileKey)
+            defaults.removeObject(forKey: selectedProfileKey)
         }
     }
 

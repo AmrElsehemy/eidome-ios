@@ -35,3 +35,11 @@ Measure App Store Search impressions, product-page views, downloads and conversi
 ## October 5 recovery update
 
 The user confirms nothing has been submitted. The September 30 / October 2 target was missed during preparation, not Apple review. PR #73 consolidates the launch candidate; see [the changelog](../CHANGELOG.md) for changes, validation and remaining gates. The recovery target is October 7 submission / October 9 public availability, conditional on completing those gates and Apple approval. Use that slot for v0.21 rather than overlapping a separate v0.22 submission. The table above preserves the original plan; redate follow-on milestones once this candidate's submission is established.
+
+## October 10 release update
+
+The owner confirms 1.0.2 is public. It includes v0.22–v0.24, so do not resubmit those improvements as new work. PR #78 remains open; the next candidate branches from its release source, not the older default branch.
+
+Next candidate: **1.0.3 (build 23)**, scoped to onboarding and return-state friction in #70. Move creation and privacy actions before the detailed introduction, place generation before the longer explanation, and restore each profile's last explorer layer. Clear temporary anatomy state on profile changes. Regression coverage verifies existing-profile upgrade, migration and deletion. Target submission October 14 / public availability October 16, conditional on validation and Apple review. Confirm build uniqueness before upload.
+
+Acceptance: clean-install onboarding at small and large text sizes, VoiceOver order, privacy/support before entry, create/cancel, existing-profile upgrade, switch/delete profiles, delete all and return to onboarding. Refresh Welcome screenshots for iPhone and iPad. Record available qualitative feedback and retention evidence without inventing metrics or adding tracking. Keep #70 open until its broader acceptance has evidence. Duo readiness is separate work due before the April 2027 requirement.

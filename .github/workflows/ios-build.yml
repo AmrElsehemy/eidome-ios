@@ -2,9 +2,9 @@ name: iOS Build
 
 on:
   pull_request:
-    branches: [master]
+    branches: [master, "release/**"]
   push:
-    branches: [master, "feature/**"]
+    branches: [master, "feature/**", "release/**"]
 
 concurrency:
   group: ios-build-${{ github.ref }}
@@ -22,6 +22,12 @@ jobs:
 
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
+
+      - name: Verify profile persistence and return state
+        run: bash scripts/test-profile-store.sh
+
+      - name: Verify saved-camera isolation and deletion
+        run: bash scripts/test-camera-store.sh
 
       - name: Validate review assets
         run: bash scripts/validate-review-readiness.sh

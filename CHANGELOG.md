@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.3 — First-run clarity (in development)
+
+- Move Create My Twin and Privacy & About above the detailed onboarding steps so the next action is easier to find. Keep the educational-reference explanation before data entry.
+- Candidate build 23; confirm uniqueness in App Store Connect before upload.
+- Clean-install, upgrade, profile switching/deletion and accessibility acceptance remain required. No submission has been made for this version.
+
+## 1.0.2 — Public
+
+Owner confirmed public availability October 10, 2026. Release source: `e6c699eae83cef309eea9a0c7e07070341dd860d` (release/1.0.2, PR #78; repository version/build 1.0.2/22). Exact public time and uploaded build were not independently verified.
+
 ## v0.24 — Mobility entry clarity (1.0.2)
 
 - Explain whose left/right is being entered and distinguish unknown values from a recorded zero.
@@ -17,7 +27,7 @@
 - Show selected structure names and side directly beneath the model, before the camera controls.
 - Use explicit muscle/bone headings and explain that the anatomy is a reference, not a scan.
 
-Eidome 1.0.1 is live, confirmed by the owner October 7. v0.22–v0.24 ship together as version 1.0.2 (build 22); not yet submitted.
+v0.22–v0.24 are included in public version 1.0.2. Older release notes below preserve their historical preparation status.
 
 ## v0.21 — Discoverability and launch polish (unreleased)
 

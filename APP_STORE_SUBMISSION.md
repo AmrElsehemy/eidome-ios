@@ -3,7 +3,7 @@
 ## Automated in CI
 
 - Debug build, static analysis, and unsigned Release archive
-- Version/build check for 1.0 (20)
+- Version/build check for 1.0.3 (23)
 - 1024×1024 icon and privacy-manifest validation
 - Required listing metadata and URL validation
 - Deterministic iPhone/iPad screenshots covering onboarding, Body, Muscles, Skeleton, and Joints
@@ -18,7 +18,7 @@
 - Test create, edit, switch, individual-delete, and delete-all on physical iPhone
 - Test supported iPad layout or explicitly switch to iPhone-only
 - Verify VoiceOver, Dynamic Type, contrast, and reduced motion
-- Confirm build 20 is greater than every build already uploaded for version 1.0
+- Confirm candidate build 23 is greater than every build already uploaded; choose a higher build if needed
 - Archive with automatic signing and upload the signed build
 - Attach a fresh physical-device recording showing the shipping Rotate 3D interaction to the Resolution Center reply
 - Complete age rating, privacy, and export-compliance answers from the shipping binary

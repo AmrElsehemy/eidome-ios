@@ -1,6 +1,1 @@
-- Anatomy now opens with the model first. Filters are tucked into a collapsible section that still summarizes your current choices.
-- The selected structure's name and side appear right under the model, with clearer muscle and bone headings.
-- Focus on a selected structure, bring back the surrounding anatomy, or clear your selection without losing your filters or saved camera views.
-- Mobility entry is clearer: see which side (left or right) you are entering, tell an unknown value from a recorded zero, and clear either side with one tap.
-- Invalid mobility values now explain what is wrong and why Save is unavailable.
-- Better VoiceOver labels for movements, sides and units.
+Getting started is clearer: Create My Twin and Privacy & About now appear before the detailed introduction, making your next step easier to find.

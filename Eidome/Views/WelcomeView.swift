@@ -34,25 +34,6 @@ struct WelcomeView: View {
                     }
                     .padding(.horizontal, 24)
 
-                    VStack(spacing: 10) {
-                        onboardingStep(
-                            icon: "figure.stand",
-                            title: "1. Build your body estimate",
-                            detail: "Start with height and weight. Add measurements later to refine the exterior shape."
-                        )
-                        onboardingStep(
-                            icon: "square.grid.2x2",
-                            title: "2. Explore reference anatomy",
-                            detail: "Browse muscles, bones, and joints to understand where structures are and what they do."
-                        )
-                        onboardingStep(
-                            icon: "ruler",
-                            title: "3. Record mobility",
-                            detail: "Save your own joint movement observations and keep them with this twin."
-                        )
-                    }
-                    .padding(.horizontal, 20)
-
                     VStack(spacing: 14) {
                         Text("Your measurements describe you. The anatomy layers are educational references, not a scan.")
                             .font(.footnote)
@@ -72,6 +53,25 @@ struct WelcomeView: View {
                         .foregroundStyle(EidomeTheme.secondaryText)
                     }
                     .padding(.horizontal, 24)
+
+                    VStack(spacing: 10) {
+                        onboardingStep(
+                            icon: "figure.stand",
+                            title: "1. Build your body estimate",
+                            detail: "Start with height and weight. Add measurements later to refine the exterior shape."
+                        )
+                        onboardingStep(
+                            icon: "square.grid.2x2",
+                            title: "2. Explore reference anatomy",
+                            detail: "Browse muscles, bones, and joints to understand where structures are and what they do."
+                        )
+                        onboardingStep(
+                            icon: "ruler",
+                            title: "3. Record mobility",
+                            detail: "Save your own joint movement observations and keep them with this twin."
+                        )
+                    }
+                    .padding(.horizontal, 20)
                     .padding(.bottom, 28)
                 }
                 .frame(maxWidth: 620)

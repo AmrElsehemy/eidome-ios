@@ -1,4 +1,6 @@
-- Clearer, scrollable onboarding that explains the body estimate, reference anatomy and mobility recording before you create a twin.
-- Explore Muscles, Skeleton, Body and Joints with named structures you can browse and select.
-- Fixed the default Body view so heads are no longer cropped, with framing that scales to profile height.
-- Rotate 3D / Done makes it easier to move the model and return to page scrolling.
+- Anatomy now opens with the model first. Filters are tucked into a collapsible section that still summarizes your current choices.
+- The selected structure's name and side appear right under the model, with clearer muscle and bone headings.
+- Focus on a selected structure, bring back the surrounding anatomy, or clear your selection without losing your filters or saved camera views.
+- Mobility entry is clearer: see which side (left or right) you are entering, tell an unknown value from a recorded zero, and clear either side with one tap.
+- Invalid mobility values now explain what is wrong and why Save is unavailable.
+- Better VoiceOver labels for movements, sides and units.

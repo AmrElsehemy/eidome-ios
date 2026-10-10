@@ -269,6 +269,7 @@ struct TwinHomeView: View {
     @State private var hasPublishedStructureCatalog = false
     @State private var isShowingAnatomyBrowser = false
     @State private var anatomyRegion: AnatomyRegion = .wholeBody
+    @State private var showsAnatomyFilters = false
     @State private var anatomyDetailFilter: AnatomyDetailFilter = .all
 
     init() {
@@ -439,8 +440,17 @@ struct TwinHomeView: View {
             if selectedMode == .anatomy {
                 anatomyLayerPicker
                     .transition(.opacity.combined(with: .move(edge: .top)))
-                anatomyFilters
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+                DisclosureGroup(isExpanded: $showsAnatomyFilters) {
+                    anatomyFilters
+                } label: {
+                    Text(selectedLayer == .muscles
+                         ? "Filters · \(anatomyRegion.rawValue) · \(anatomyDetailFilter.rawValue)"
+                         : "Filters · \(anatomyRegion.rawValue)")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(EidomeTheme.secondaryText)
+                }
+                .tint(EidomeTheme.cyan)
+                .padding(.horizontal, 22)
             }
 
             TwinSceneView(
@@ -467,6 +477,32 @@ struct TwinHomeView: View {
             )
             .frame(height: selectedMode == .body ? 380 : 420)
             .id(profile.id)
+
+            if selectedMode == .anatomy, let selection = selectedStructure {
+                VStack(spacing: 4) {
+                    Text(selection.name)
+                        .font(.headline)
+                        .multilineTextAlignment(.center)
+                    Text([selection.side?.rawValue, "Reference anatomy"]
+                        .compactMap { $0 }.joined(separator: " · "))
+                        .font(.caption)
+                        .foregroundStyle(EidomeTheme.cyan)
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 22)
+                .accessibilityElement(children: .combine)
+
+                Text("Left and right refer to the body shown, not the screen.")
+                    .font(.caption)
+                    .foregroundStyle(EidomeTheme.secondaryText)
+                    .padding(.horizontal, 22)
+
+                ViewThatFits(in: .horizontal) {
+                    HStack { anatomySelectionActions(selection) }
+                    VStack { anatomySelectionActions(selection) }
+                }
+                .padding(.horizontal, 22)
+            }
 
             TwinSceneControlBar(
                 isCameraControlEnabled: $isSceneCameraControlEnabled,
@@ -527,6 +563,22 @@ struct TwinHomeView: View {
         .padding(.top, 12)
     }
 
+    @ViewBuilder
+    private func anatomySelectionActions(_ selection: AnatomySelection) -> some View {
+        Button(focusedStructure == selection ? "Show surrounding anatomy" : "Focus structure") {
+            focusedStructure = focusedStructure == selection ? nil : selection
+        }
+        .buttonStyle(.bordered)
+        .accessibilityHint("Changes emphasis without changing your saved camera view or filters.")
+
+        Button("Clear selection") {
+            selectedStructure = nil
+            focusedStructure = nil
+        }
+        .buttonStyle(.bordered)
+        .accessibilityHint("Removes the selection and restores surrounding anatomy within the current filters.")
+    }
+
     private var explorerContextHeader: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: selectedMode.symbol)
@@ -565,7 +617,7 @@ struct TwinHomeView: View {
     private var explorerTitle: String {
         switch selectedMode {
         case .body: "Your body"
-        case .anatomy: "Explore what is underneath"
+        case .anatomy: selectedLayer == .muscles ? "Explore muscles" : "Identify bones"
         case .joints: "How you move"
         }
     }
@@ -575,7 +627,7 @@ struct TwinHomeView: View {
         case .body:
             "See how your measurements shape this estimate."
         case .anatomy:
-            "Inspect reference structures, then connect them to movement."
+            "Tap a structure to learn its name and role in movement. Reference anatomy, not a scan."
         case .joints:
             "Review estimated joint locations and add your mobility ranges."
         }

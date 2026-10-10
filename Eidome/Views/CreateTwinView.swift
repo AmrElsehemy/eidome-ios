@@ -19,7 +19,6 @@ struct CreateTwinView: View {
                     header
                     identitySection
                     bodySection
-                    nextStep
                     trustNote
 
                     Button(draft.relationship == .me ? "Generate My Twin" : "Generate Twin") {
@@ -28,6 +27,14 @@ struct CreateTwinView: View {
                     .buttonStyle(EidomePrimaryButtonStyle())
                     .disabled(!draft.isValid)
                     .opacity(draft.isValid ? 1 : 0.45)
+
+                    if draft.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Text("Enter a name above to create your twin.")
+                            .font(.footnote)
+                            .foregroundStyle(EidomeTheme.secondaryText)
+                    }
+
+                    nextStep
                 }
                 .padding(24)
                 .padding(.bottom, 18)
@@ -63,6 +70,7 @@ struct CreateTwinView: View {
             fieldLabel("PROFILE")
 
             TextField("Name", text: $draft.name)
+                .accessibilityLabel("Twin name")
                 .textContentType(.name)
                 .font(.title3.weight(.semibold))
                 .padding(16)
@@ -194,6 +202,8 @@ struct CreateTwinView: View {
                     .foregroundStyle(EidomeTheme.cyan)
             }
             Slider(value: valueBinding, in: range, step: 1)
+                .accessibilityLabel(label)
+                .accessibilityValue(value)
                 .tint(EidomeTheme.violet)
         }
     }

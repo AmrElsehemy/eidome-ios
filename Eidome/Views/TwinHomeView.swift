@@ -312,6 +312,14 @@ struct TwinHomeView: View {
             }
         }
         .foregroundStyle(.white)
+        .onAppear { restoreExplorerLayer() }
+        .onChange(of: profileStore.selectedProfile?.id) { _, _ in
+            clearAnatomyInteraction()
+            anatomyRegion = .wholeBody
+            anatomyDetailFilter = .all
+            showsAnatomyFilters = false
+            restoreExplorerLayer()
+        }
         .sheet(isPresented: $isShowingProfiles) {
             ProfileSwitcherSheet()
         }
@@ -402,6 +410,8 @@ struct TwinHomeView: View {
                 .background(EidomeTheme.panel, in: Capsule())
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Switch twin profile")
+            .accessibilityValue(profile.name)
         }
         .padding(.horizontal, 22)
         .padding(.top, 12)
@@ -1019,6 +1029,7 @@ struct TwinHomeView: View {
                 selectedLayer = .joints
             }
             clearAnatomyInteraction()
+            profileStore.selectExplorerLayer(selectedLayer)
         }
     }
 
@@ -1028,7 +1039,17 @@ struct TwinHomeView: View {
             lastAnatomyLayer = layer
             anatomyDetailFilter = .all
             clearAnatomyInteraction()
+            profileStore.selectExplorerLayer(selectedLayer)
         }
+    }
+
+    private func restoreExplorerLayer() {
+        #if DEBUG
+        // Marketing captures intentionally choose a layer without changing saved profiles.
+        if ProcessInfo.processInfo.arguments.contains("-eidomeScreenshotTwin") { return }
+        #endif
+        selectedLayer = profileStore.selectedExplorerLayer
+        lastAnatomyLayer = selectedLayer == .skeleton ? .skeleton : .muscles
     }
 
     private func clearAnatomyInteraction() {

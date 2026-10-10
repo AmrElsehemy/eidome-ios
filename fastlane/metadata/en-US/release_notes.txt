@@ -1,1 +1,5 @@
-Getting started is clearer: Create My Twin and Privacy & About now appear before the detailed introduction, making your next step easier to find.
+- Getting started is clearer, with creation and privacy actions easier to find and an explanation when a twin name is missing.
+- Pick up where you left off: each twin remembers its last Body, Muscles, Skeleton or Joints view.
+- Switching twins clears temporary anatomy selections and filters so you can explore the next profile afresh.
+- Clearer accessibility labels for creating and switching twins and adjusting starting measurements.
+- Improved cleanup of saved 3D views when deleting a twin.

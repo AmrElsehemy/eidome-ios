@@ -119,6 +119,8 @@ enum TwinCameraStateScope: String, Hashable {
 enum TwinCameraStateStore {
     private static let keyPrefix = "eidome.camera-state.v2"
     private static let legacyKeyPrefix = "eidome.camera-state.v1"
+    // A departing scene can save during teardown after its profile was deleted.
+    private static var deletedProfileIDs: Set<UUID> = []
 
     static func load(
         profileID: UUID,
@@ -147,7 +149,8 @@ enum TwinCameraStateStore {
         layer: TwinBodyLayer,
         scope: TwinCameraStateScope
     ) {
-        guard state.isSafe, let data = try? JSONEncoder().encode(state) else { return }
+        guard !deletedProfileIDs.contains(profileID),
+              state.isSafe, let data = try? JSONEncoder().encode(state) else { return }
         UserDefaults.standard.set(
             data,
             forKey: key(profileID: profileID, layer: layer, scope: scope)
@@ -167,6 +170,7 @@ enum TwinCameraStateStore {
     }
 
     static func removeAll(profileID: UUID) {
+        deletedProfileIDs.insert(profileID)
         removeKeys(withPrefix: "\(keyPrefix).\(profileID.uuidString).")
         removeKeys(withPrefix: "\(legacyKeyPrefix).\(profileID.uuidString).")
     }

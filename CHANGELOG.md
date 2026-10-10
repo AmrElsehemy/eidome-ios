@@ -1,8 +1,14 @@
 # Changelog
 
-## 1.0.3 — First-run clarity (in development)
+## 1.0.3 — Onboarding and return experience (in development)
 
 - Move Create My Twin and Privacy & About above the detailed onboarding steps so the next action is easier to find. Keep the educational-reference explanation before data entry.
+- Put generation after the required profile fields and trust note, before the longer next-step explanation. Explain when a name is missing and label name/measurement controls for assistive technology.
+- Remember each profile's last Body, Muscles, Skeleton or Joints layer across switching and relaunch. Existing profiles start in Body until they choose another layer; stored measurements and camera views retain their format.
+- Clear temporary selections, focus, hidden structures, filters and active rotation on profile changes. Give the profile switcher an explicit accessible label.
+- Repair stale saved profile selections, discard invalid layer preferences, and delete layer preferences with their profile or all data.
+- Prevent late scene teardown/background saves from recreating camera data for deleted profiles.
+- Add persistence regression coverage for upgrade, legacy migration, independent profiles, relaunch, deletion and corrupt preferences.
 - Candidate build 23; confirm uniqueness in App Store Connect before upload.
 - Clean-install, upgrade, profile switching/deletion and accessibility acceptance remain required. No submission has been made for this version.
 

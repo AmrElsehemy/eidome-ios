@@ -1,0 +1,76 @@
+{
+  "version": "1.0.3",
+  "candidateBuild": 23,
+  "capturedOn": "2026-10-10",
+  "devices": [
+    "iPhone 18 Pro Max / iOS 27.0",
+    "iPad Pro 13-inch (M5) / iOS 27.0"
+  ],
+  "screenshots": [
+    {
+      "file": "iPad-13-01-muscles.png",
+      "width": 2064,
+      "height": 2752,
+      "sha256": "d248b3fa28e66e59b735928ea25a58e2c231c3d6699e71adea3c9426ff4fd475"
+    },
+    {
+      "file": "iPad-13-02-skeleton.png",
+      "width": 2064,
+      "height": 2752,
+      "sha256": "96bbf06b740cace4377eb6bf005fd27be467653f5d1c5fbc57136dda35de470d"
+    },
+    {
+      "file": "iPad-13-03-body.png",
+      "width": 2064,
+      "height": 2752,
+      "sha256": "88ef0afdc480cda13e31152f363c1e3c5b8d775588c64f7f3a822d874831e5d4"
+    },
+    {
+      "file": "iPad-13-04-joints.png",
+      "width": 2064,
+      "height": 2752,
+      "sha256": "d13feb1d376e66ebe6664126fc5b1a3246b87acf8bc4da6cafbe16ea06721773"
+    },
+    {
+      "file": "iPad-13-05-welcome.png",
+      "width": 2064,
+      "height": 2752,
+      "sha256": "8e5e571c690da019ccca5bcd00f2c6dc22975e2057d9a9315252cd95ee2dd9b8"
+    },
+    {
+      "file": "iPhone-6.9-01-muscles.png",
+      "width": 1320,
+      "height": 2868,
+      "sha256": "a40004587f8ded72e99aa213a06069a791e66e16f875907cf0252513c0876533"
+    },
+    {
+      "file": "iPhone-6.9-02-skeleton.png",
+      "width": 1320,
+      "height": 2868,
+      "sha256": "746341a95e552d1a00b11799b0448cdca768ea5dbc0608bdd6069c51b1bcba80"
+    },
+    {
+      "file": "iPhone-6.9-03-body.png",
+      "width": 1320,
+      "height": 2868,
+      "sha256": "abc34440677c2c03a3501dc18f48a80db921a4ae0bc73d8ea815e356aa1cf5ee"
+    },
+    {
+      "file": "iPhone-6.9-04-joints.png",
+      "width": 1320,
+      "height": 2868,
+      "sha256": "5b725ea428084385a3633de25fd0a2d70bc28f14de7e8ecee5e3b978ec09349f"
+    },
+    {
+      "file": "iPhone-6.9-05-welcome.png",
+      "width": 1320,
+      "height": 2868,
+      "sha256": "ba8c90cfea59affcf5dbda77a664f640fb13ab4a8726fc547e4a298c1c0fa496"
+    }
+  ],
+  "uiSourceHashes": {
+    "Eidome/Views/WelcomeView.swift": "32f446d1fc70151bca2915a4b6d835b9f32e78d1fb076619be9086fdaf7ec5a4",
+    "Eidome/Views/CreateTwinView.swift": "9f7e14acb561d87cc5a5e740b54a7905e9673eb86e8320ccaff90bb0aeb1689f",
+    "Eidome/Views/TwinHomeView.swift": "9d29e816f9385ae3009a14658f6fcb1848928c1ca0f90bf9277de49910c1306d"
+  }
+}

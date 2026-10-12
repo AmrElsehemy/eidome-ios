@@ -253,6 +253,7 @@ struct TwinHomeView: View {
     @EnvironmentObject private var profileStore: ProfileStore
     @State private var isShowingProfiles = false
     @State private var isShowingDetails = false
+    @State private var isShowingHistory = false
     @State private var isRefiningTwin = false
     @State private var requestedMeasurementGuide: BodyMeasurementKind?
     @State private var selectedLayer: TwinBodyLayer
@@ -305,6 +306,14 @@ struct TwinHomeView: View {
                     VStack(spacing: 0) {
                         topBar(profile)
                         twinStage(profile)
+                        Button {
+                            isShowingHistory = true
+                        } label: {
+                            Label("Measurement history", systemImage: "clock.arrow.circlepath")
+                                .frame(maxWidth: .infinity, minHeight: 44)
+                        }
+                        .buttonStyle(.bordered)
+                        .padding(.horizontal, 22)
                         identityCard(profile)
                     }
                     .padding(.bottom, 28)
@@ -319,6 +328,11 @@ struct TwinHomeView: View {
             anatomyDetailFilter = .all
             showsAnatomyFilters = false
             restoreExplorerLayer()
+        }
+        .sheet(isPresented: $isShowingHistory) {
+            if let profile = profileStore.selectedProfile {
+                MeasurementHistoryView(profileID: profile.id)
+            }
         }
         .sheet(isPresented: $isShowingProfiles) {
             ProfileSwitcherSheet()
@@ -2423,5 +2437,97 @@ private struct RequiredMetricInputRow: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 7)
+    }
+}
+
+
+private struct MeasurementHistoryView: View {
+    @EnvironmentObject private var store: ProfileStore
+    @Environment(\.dismiss) private var dismiss
+    let profileID: UUID
+    @State private var pendingDelete: UUID?
+    @State private var comparisonID: UUID?
+
+    private var records: [MeasurementSnapshot] {
+        (store.profiles.first { $0.id == profileID }?.measurementHistory ?? [])
+            .sorted { $0.savedAt > $1.savedAt }
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Text("Snapshots keep entered values when you save a change. Saved dates are not necessarily measurement dates. Values are not measurements of the 3D model.")
+                    Text("Correct a current reading in Body or Mobility to create a new snapshot. Deleting a snapshot does not change your current readings.")
+                }
+                if records.isEmpty {
+                    Text("No saved snapshots. Your next measurement change will start this history.")
+                } else {
+                    Section("Compare saved values") {
+                        Picker("Compare against", selection: $comparisonID) {
+                            Text("No comparison").tag(nil as UUID?)
+                            ForEach(records) { record in
+                                Text(record.savedAt.formatted(date: .abbreviated, time: .standard))
+                                    .tag(Optional(record.id))
+                            }
+                        }
+                        Text("Differences describe entered numbers, not improvement or causation. Compare methods and sides before interpreting a change.")
+                            .font(.caption)
+                    }
+                    ForEach(records) { record in
+                        Section {
+                            DisclosureGroup {
+                                ForEach(Array(record.readings.enumerated()), id: \.offset) { index, reading in
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(reading.name).font(.headline)
+                                        Text(reading.value.map { "\($0.formatted()) \(reading.unit)" } ?? "Not recorded")
+                                        if let base = records.first(where: { $0.id == comparisonID }),
+                                           base.id != record.id,
+                                           let old = base.readings[index].value, let value = reading.value {
+                                            Text("Difference from selected snapshot: \((value - old).formatted(.number.sign(strategy: .always()))) \(reading.unit)")
+                                                .font(.caption)
+                                        }
+                                    }
+                                }
+                                if let metadata = record.metadata, !metadata.isEmpty {
+                                    Text("Body measurement provenance").font(.headline)
+                                    ForEach(metadata.keys.sorted(), id: \.self) { key in
+                                        if let item = metadata[key] {
+                                            Text("\(key): \(item.side.rawValue), \(item.method.rawValue), \(item.confidence.rawValue) confidence. Recorded \(item.recordedAt.formatted()). Original unit: \(item.unit.rawValue).")
+                                                .font(.caption)
+                                        }
+                                    }
+                                } else {
+                                    Text("Body measurement method/date metadata not recorded.").font(.caption)
+                                }
+                                Text("Mobility values are self-entered; measurement method and date are not recorded separately.").font(.caption)
+                                Button("Delete snapshot", role: .destructive) { pendingDelete = record.id }
+                            } label: {
+                                VStack(alignment: .leading) {
+                                    Text(record.savedAt.formatted(date: .abbreviated, time: .standard))
+                                    if record.isStartingRecord {
+                                        Text("Starting record · imported existing values; original date unknown")
+                                            .font(.caption)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Measurement history")
+            .toolbar { Button("Done") { dismiss() } }
+            .confirmationDialog("Delete this saved snapshot? Current readings stay unchanged.", isPresented: Binding(
+                get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }
+            ), titleVisibility: .visible) {
+                Button("Delete snapshot", role: .destructive) {
+                    if let id = pendingDelete {
+                        store.deleteSnapshot(id, profileID: profileID)
+                        if comparisonID == id { comparisonID = nil }
+                    }
+                    pendingDelete = nil
+                }
+            }
+        }
     }
 }

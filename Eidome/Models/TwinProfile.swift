@@ -173,6 +173,7 @@ struct TwinProfile: Identifiable, Codable, Hashable {
     var measurementsUpdatedAt: Date?
     var measurementMetadata: [String: BodyMeasurementMetadata]?
     var mobilityProfile: MobilityProfile?
+    var measurementHistory: [MeasurementSnapshot]? = nil
 
     init(
         id: UUID = UUID(),
@@ -244,5 +245,56 @@ struct TwinDraft {
             heightCentimeters: heightCentimeters,
             weightKilograms: weightKilograms
         )
+    }
+}
+
+
+/// A saved set of entered values, not a measured avatar or a clinical observation.
+struct MeasurementSnapshot: Identifiable, Codable, Hashable {
+    let id: UUID
+    let savedAt: Date
+    let isStartingRecord: Bool
+    let height: Double
+    let weight: Double
+    let body: BodyMeasurements?
+    let metadata: [String: BodyMeasurementMetadata]?
+    let mobility: MobilityProfile?
+
+    init(profile: TwinProfile, starting: Bool = false, date: Date = .now) {
+        id = UUID()
+        savedAt = date
+        isStartingRecord = starting
+        height = profile.heightCentimeters
+        weight = profile.weightKilograms
+        body = profile.bodyMeasurements
+        metadata = profile.measurementMetadata
+        mobility = profile.mobilityProfile
+    }
+
+    func matches(_ profile: TwinProfile) -> Bool {
+        height == profile.heightCentimeters && weight == profile.weightKilograms
+            && body == profile.bodyMeasurements && metadata == profile.measurementMetadata
+            && mobility == profile.mobilityProfile
+    }
+
+    var readings: [(name: String, value: Double?, unit: String)] {
+        [
+            ("Height", height, "cm"), ("Weight", weight, "kg"),
+            ("Shoulder width", body?.shoulderWidthCentimeters, "cm"),
+            ("Chest", body?.chestCircumferenceCentimeters, "cm"),
+            ("Waist", body?.waistCircumferenceCentimeters, "cm"),
+            ("Hip", body?.hipCircumferenceCentimeters, "cm"),
+            ("Inseam", body?.inseamCentimeters, "cm"),
+            ("Thigh", body?.thighCircumferenceCentimeters, "cm"),
+            ("Calf", body?.calfCircumferenceCentimeters, "cm"),
+            ("Left ankle dorsiflexion", mobility?.leftAnkleDorsiflexion, "°"),
+            ("Right ankle dorsiflexion", mobility?.rightAnkleDorsiflexion, "°"),
+            ("Left hip internal rotation", mobility?.leftHipInternalRotation, "°"),
+            ("Right hip internal rotation", mobility?.rightHipInternalRotation, "°"),
+            ("Left shoulder flexion", mobility?.leftShoulderFlexion, "°"),
+            ("Right shoulder flexion", mobility?.rightShoulderFlexion, "°"),
+            ("Left thoracic rotation", mobility?.leftThoracicRotation, "°"),
+            ("Right thoracic rotation", mobility?.rightThoracicRotation, "°")
+        ]
     }
 }

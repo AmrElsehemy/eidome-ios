@@ -1,5 +1,13 @@
 # Changelog
 
+## Next — Measurement history (in development)
+
+- Preserve body and mobility snapshots when entered values or body measurement metadata change. No-op saves do not add records.
+- Import existing values as a starting record with unknown original date, retaining metadata where available.
+- Browse snapshots, compare entered values with units, and delete individual records without changing current readings. Corrections create new snapshots.
+- History stays on device, belongs to its profile, and is removed with profile/all-data deletion. No inferred trends, clinical claims or avatar-change comparisons.
+- Matching website copy marks this feature in development. Region/type filters and body-map comparison from #31 remain follow-up scope.
+
 ## 1.0.3 — Onboarding and return experience (in development)
 
 - Move Create My Twin and Privacy & About above the detailed onboarding steps so the next action is easier to find. Keep the educational-reference explanation before data entry.

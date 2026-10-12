@@ -45,7 +45,9 @@ final class ProfileStore: ObservableObject {
     }
 
     func add(_ profile: TwinProfile) {
-        profiles.append(profile)
+        var stored = profile
+        stored.measurementHistory = [MeasurementSnapshot(profile: profile)]
+        profiles.append(stored)
         selectedProfileID = profile.id
         save()
     }
@@ -58,7 +60,20 @@ final class ProfileStore: ObservableObject {
 
     func update(_ profile: TwinProfile) {
         guard let index = profiles.firstIndex(where: { $0.id == profile.id }) else { return }
-        profiles[index] = profile
+        let previous = profiles[index]
+        var updated = profile
+        var history = previous.measurementHistory ?? [MeasurementSnapshot(profile: previous, starting: true)]
+        if !MeasurementSnapshot(profile: previous).matches(profile) {
+            history.append(MeasurementSnapshot(profile: profile))
+        }
+        updated.measurementHistory = history
+        profiles[index] = updated
+        save()
+    }
+
+    func deleteSnapshot(_ id: UUID, profileID: UUID) {
+        guard let index = profiles.firstIndex(where: { $0.id == profileID }) else { return }
+        profiles[index].measurementHistory?.removeAll { $0.id == id }
         save()
     }
 
@@ -92,7 +107,13 @@ final class ProfileStore: ObservableObject {
             let savedProfiles = try? JSONDecoder().decode([TwinProfile].self, from: data)
         else { return }
 
-        profiles = savedProfiles
+        profiles = savedProfiles.map { profile in
+            var migrated = profile
+            if migrated.measurementHistory == nil {
+                migrated.measurementHistory = [MeasurementSnapshot(profile: profile, starting: true)]
+            }
+            return migrated
+        }
         let rawID = defaults.string(forKey: selectedProfileKey)
             ?? defaults.string(forKey: legacySelectedProfileKey)
         if let rawID {

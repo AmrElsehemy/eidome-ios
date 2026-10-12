@@ -79,7 +79,7 @@ struct AppSettingsView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("All twins, measurements, and mobility data will be permanently removed from this device.")
+                Text("All twins, measurements, saved history, and mobility data will be permanently removed from this device.")
             }
         }
         .preferredColorScheme(.dark)
@@ -110,7 +110,7 @@ private struct PrivacyNoticeView: View {
             }
 
             Section("Your control") {
-                Text("Delete one twin from the profile selector, or use Delete All Data in About Eidome. Deleting the app also removes its local data.")
+                Text("Changed readings are retained in measurement history on this device. Delete individual snapshots in Measurement history; this leaves current readings unchanged. Delete one twin from the profile selector, or use Delete All Data in About Eidome, to remove its readings and history. Deleting the app also removes its local data.")
             }
 
             Section {
